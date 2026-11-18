@@ -41,6 +41,33 @@ fun PlaceholderScreen(
     }
 }
 
+
+@Composable
+fun PlansPlaceholderScreen(
+    onStartWorkout: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+        Text("My Workout Plans")
+
+        Button(
+            onClick = {
+                onStartWorkout("push-001")
+            }
+        ) {
+            Text("Start Push Day")
+        }
+
+        Button(onClick = onBack) {
+            Text("Back")
+        }
+    }
+}
+
 @Composable
 fun HistoryPlaceholderScreen(
     onBack: () -> Unit
