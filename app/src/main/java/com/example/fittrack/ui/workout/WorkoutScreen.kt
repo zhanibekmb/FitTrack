@@ -13,17 +13,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fittrack.R
 
 @Composable
-fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Unit, onFinished: () -> Unit) {
+fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onFinished: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val timerState by viewModel.restTimer.collectAsStateWithLifecycle()
     var confirmFinish by rememberSaveable(uiState.sessionId) { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable(uiState.sessionId) { mutableStateOf(false) }
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { Text(stringResource(R.string.active_workout), style = MaterialTheme.typography.headlineMedium) }
         uiState.message?.let { message ->
             item {
                 Text(stringResource(when (message) {
@@ -76,7 +75,6 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
         } else {
             item { Text(stringResource(R.string.workout_conflict)) }
         }
-        item { OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back)) } }
     }
     if (confirmFinish && uiState.planId == planId) AlertDialog(
         onDismissRequest = { confirmFinish = false },

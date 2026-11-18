@@ -1,6 +1,10 @@
 package com.example.fittrack.ui.plans
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
@@ -17,46 +21,49 @@ import com.example.fittrack.R
 import com.example.fittrack.data.model.Exercise
 
 @Composable
-fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onStartWorkout: () -> Unit, onBack: () -> Unit) {
+fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onStartWorkout: () -> Unit) {
     val plans by viewModel.plans.collectAsStateWithLifecycle()
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
     val plan = plans.firstOrNull { it.id == planId }
     var showAdd by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (plan == null) {
-            Text(stringResource(R.string.invalid_plan))
-        } else {
-            Text(plan.name, style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.training_day, dayName(plan.dayOfWeek)))
-            if (plan.exercises.isEmpty()) Text(stringResource(R.string.no_plan_exercises))
-            Button(onClick = { showAdd = true }, enabled = exercises.isNotEmpty()) {
-                Text(stringResource(R.string.add_exercise))
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (plan == null) item { Text(stringResource(R.string.invalid_plan)) }
+        else {
+            item { Text(plan.name, style = MaterialTheme.typography.headlineMedium) }
+            item { Text(stringResource(R.string.training_day, dayName(plan.dayOfWeek)), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (plan.exercises.isEmpty()) item { Text(stringResource(R.string.no_plan_exercises)) }
+            item {
+                Button(onClick = onStartWorkout, enabled = plan.exercises.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.start_workout))
+                }
+                if (plan.exercises.isEmpty()) Text(stringResource(R.string.empty_plan_hint), style = MaterialTheme.typography.bodyMedium)
             }
-            if (exercises.isEmpty()) Text(stringResource(R.string.no_catalog_exercises))
-            Button(onClick = onStartWorkout) { Text(stringResource(R.string.start_workout)) }
-            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                itemsIndexed(plan.exercises) { index, planned ->
-                    val exercise = exercises.firstOrNull { it.id == planned.exerciseId }
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(exercise?.name ?: stringResource(R.string.exercise_unavailable), style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.exercise_target, planned.targetSets, planned.targetReps, planned.targetWeightKg))
-                        }
+            item {
+                FilledTonalButton(onClick = { showAdd = true }, enabled = exercises.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.add_exercise))
+                }
+                if (exercises.isEmpty()) Text(stringResource(R.string.no_catalog_exercises))
+            }
+            itemsIndexed(plan.exercises) { _, planned ->
+                val exercise = exercises.firstOrNull { it.id == planned.exerciseId }
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(exercise?.name ?: stringResource(R.string.exercise_unavailable), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.exercise_target, planned.targetSets, planned.targetReps, planned.targetWeightKg),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
-        if (showAdd && plan != null) AddExerciseDialog(
-            exercises = exercises,
-            onDismiss = { showAdd = false },
-            onSave = { exerciseId, sets, reps, weight ->
-                viewModel.addExercise(planId, exerciseId, sets, reps, weight).also { if (it) showAdd = false }
-            }
-        )
-        OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back)) }
     }
+    if (showAdd && plan != null) AddExerciseDialog(
+        exercises = exercises,
+        onDismiss = { showAdd = false },
+        onSave = { exerciseId, sets, reps, weight ->
+            viewModel.addExercise(planId, exerciseId, sets, reps, weight).also { if (it) showAdd = false }
+        }
+    )
 }
-
 @Composable
 private fun AddExerciseDialog(
     exercises: List<Exercise>,
@@ -82,7 +89,7 @@ private fun AddExerciseDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.add_exercise)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box {
                     OutlinedButton(onClick = { menuOpen = true }) {
                         Text(exercises.firstOrNull { it.id == effectiveId }?.name ?: stringResource(R.string.select_exercise))
@@ -97,13 +104,13 @@ private fun AddExerciseDialog(
                     }
                 }
                 OutlinedTextField(sets, { sets = it }, label = { Text(stringResource(R.string.sets)) },
-                    isError = attempted && setsInvalid,
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), isError = attempted && setsInvalid,
                     supportingText = if (attempted && setsInvalid) {{ Text(stringResource(R.string.positive_sets_required)) }} else null)
                 OutlinedTextField(reps, { reps = it }, label = { Text(stringResource(R.string.repetitions)) },
-                    isError = attempted && repsInvalid,
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), isError = attempted && repsInvalid,
                     supportingText = if (attempted && repsInvalid) {{ Text(stringResource(R.string.positive_reps_required)) }} else null)
                 OutlinedTextField(weight, { weight = it }, label = { Text(stringResource(R.string.weight_kg)) },
-                    isError = attempted && weightInvalid,
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), isError = attempted && weightInvalid,
                     supportingText = if (attempted && weightInvalid) {{ Text(stringResource(R.string.valid_weight_required)) }} else null)
                 if (exercises.isEmpty()) Text(stringResource(R.string.no_catalog_exercises))
                 if (saveError) Text(stringResource(R.string.add_exercise_failed), color = MaterialTheme.colorScheme.error)
@@ -112,7 +119,7 @@ private fun AddExerciseDialog(
         confirmButton = {
             TextButton(onClick = {
                 attempted = true
-                if (!setsInvalid && !repsInvalid && !weightInvalid && parsedSets != null && parsedReps != null && parsedWeight != null && effectiveId != null) {
+                if (!setsInvalid && !repsInvalid && !weightInvalid && effectiveId != null) {
                     saveError = !onSave(effectiveId, parsedSets, parsedReps, parsedWeight)
                 }
             }, enabled = effectiveId != null) { Text(stringResource(R.string.save)) }

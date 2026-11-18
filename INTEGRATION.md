@@ -21,7 +21,8 @@ Home, planning, workout tracking, history, and exercise progress are connected i
 - Use `Routes.workout(id)`, `Routes.planDetail(id)`, and `Routes.exerciseProgress(id)`
   to build routes. Navigation decodes arguments; do not decode them a second time.
 - Collect StateFlow using `collectAsStateWithLifecycle`. Do not mutate the repository
-  during composition. The graph applies system-bar padding once.
+  during composition. The graph applies the common Material app bar and system-bar
+  padding once; child screens do not add duplicate headers or Back buttons.
 - Monday = 1, Sunday = 7. Dashboard refreshes the local day while observed.
 
 ## Workout results

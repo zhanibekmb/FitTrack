@@ -1,4 +1,4 @@
-package com.example.fittrack.ui.history
+﻿package com.example.fittrack.ui.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

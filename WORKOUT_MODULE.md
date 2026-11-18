@@ -51,3 +51,10 @@ The unit suite covers input validation, repeated exercise targets, completed ext
 set restoration, plan/result separation, corrections, duplicate taps, finish and
 discard behavior, missing sessions, previous results, draft retention, and delayed
 timer ticks. Run the command in README before integration.
+
+## Latest main integration
+
+The final branch includes `aa8ed09` (Material Design implemented). Shared app bars,
+English resources, planning screens, and history/progress styling are preserved.
+Workout tracking continues to use its ViewModel, Previous, corrections, extra sets,
+and configurable rest timer. The connected workout-flow test follows this UI.
