@@ -1,103 +1,95 @@
-
 package com.example.fittrack.navigation
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
-
+import com.example.fittrack.R
 import com.example.fittrack.data.repository.FitTrackContainer
-import com.example.fittrack.ui.home.HomeScreen
-import com.example.fittrack.ui.home.HomeViewModel
-import com.example.fittrack.ui.home.HomeViewModelFactory
+import com.example.fittrack.ui.home.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun FitTrackNavGraph() {
-
     val navController = rememberNavController()
-
-    // Shared Repository for all screens
     val repository = FitTrackContainer.repository
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val conflictMessage = stringResource(R.string.workout_conflict)
+    val invalidMessage = stringResource(R.string.invalid_plan)
 
-    NavHost(
-        navController = navController,
-        startDestination = Routes.HOME
-    ) {
-
-        // HOME
-        composable(Routes.HOME) {
-
-            val homeViewModel: HomeViewModel = viewModel(
-                factory = HomeViewModelFactory(repository)
-            )
-
-            val uiState by homeViewModel.uiState
-                .collectAsStateWithLifecycle()
-
-            HomeScreen(
-                uiState = uiState,
-
-                onOpenPlans = {
-                    navController.navigate(Routes.PLANS)
-                },
-
-                onOpenHistory = {
-                    navController.navigate(Routes.HISTORY)
-                }
-            )
+    fun openWorkout(planId: String) {
+        val active = repository.activeSession.value
+        val message = when {
+            repository.plans.value.none { it.id == planId } -> invalidMessage
+            active != null && active.planId != planId -> conflictMessage
+            active == null && repository.startWorkout(planId) == null -> invalidMessage
+            else -> null
         }
+        if (message != null) {
+            scope.launch { snackbar.showSnackbar(message) }
+        } else {
+            navController.navigate(Routes.workout(planId)) { launchSingleTop = true }
+        }
+    }
 
-        // PLANS
-        composable(Routes.PLANS) {
-
-            PlansPlaceholderScreen(
-                onStartWorkout = { planId ->
-                    navController.navigate(
-                        Routes.workout(planId)
+    // Apply system-bar insets once for all current screens.
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = Routes.HOME,
+            modifier = Modifier.padding(padding)
+        ) {
+            composable(Routes.HOME) {
+                val homeViewModel: HomeViewModel = viewModel(
+                    factory = HomeViewModelFactory(repository)
+                )
+                val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                HomeScreen(
+                    uiState = uiState,
+                    onOpenPlans = {
+                        navController.navigate(Routes.PLANS) { launchSingleTop = true }
+                    },
+                    onOpenHistory = {
+                        navController.navigate(Routes.HISTORY) { launchSingleTop = true }
+                    },
+                    onResumeWorkout = { openWorkout(it) }
+                )
+            }
+            composable(Routes.PLANS) {
+                val plans by repository.plans.collectAsStateWithLifecycle()
+                PlansPlaceholderScreen(
+                    plans = plans,
+                    onStartWorkout = { openWorkout(it) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.HISTORY) {
+                HistoryPlaceholderScreen(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = Routes.WORKOUT,
+                arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
+            ) { entry ->
+                val planId = entry.arguments?.getString(Routes.PLAN_ID)
+                val plans by repository.plans.collectAsStateWithLifecycle()
+                if (planId.isNullOrBlank() || plans.none { it.id == planId }) {
+                    InvalidPlanPlaceholderScreen(onBack = { navController.popBackStack() })
+                } else {
+                    WorkoutPlaceholderScreen(
+                        planId = planId,
+                        onBack = { navController.popBackStack() }
                     )
-                },
-
-                onBack = {
-                    navController.popBackStack()
                 }
-            )
-        }
-
-        // HISTORY
-        composable(Routes.HISTORY) {
-
-            HistoryPlaceholderScreen(
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        // WORKOUT
-        composable(
-            route = Routes.WORKOUT,
-            arguments = listOf(
-                navArgument("planId") {
-                    type = NavType.StringType
-                }
-            )
-        ) { backStackEntry ->
-
-            val planId = backStackEntry.arguments
-                ?.getString("planId")
-                .orEmpty()
-
-            WorkoutPlaceholderScreen(
-                planId = planId,
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
+            }
         }
     }
 }

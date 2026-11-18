@@ -4,15 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.fittrack.navigation.FitTrackNavGraph
-import com.example.fittrack.ui.home.HomeScreen
 import com.example.fittrack.ui.theme.FitTrackTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,21 +12,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FitTrackTheme {
-                FitTrackNavGraph()
-            }
+            FitTrackTheme { FitTrackNavGraph() }
         }
-    }
-}
-
-@Composable
-fun Greeting() {
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FitTrackTheme {
-        FitTrackNavGraph()
     }
 }

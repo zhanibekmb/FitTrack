@@ -6,14 +6,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import com.example.fittrack.R
+import com.example.fittrack.ui.components.StatCard
 import androidx.compose.ui.unit.dp
-import java.util.Locale
 
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
     onOpenPlans: () -> Unit,
-    onOpenHistory: () -> Unit
+    onOpenHistory: () -> Unit,
+    onResumeWorkout: (String) -> Unit = {}
 ) {
 
     Column(
@@ -25,18 +29,18 @@ fun HomeScreen(
     ) {
 
         Text(
-            text = "FitTrack",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineLarge
         )
 
         Text(
-            text = "Your workouts. Your progress.",
+            text = stringResource(R.string.tagline),
             style = MaterialTheme.typography.titleMedium
         )
 
         // STATISTICS
         Text(
-            text = "My Statistics",
+            text = stringResource(R.string.statistics),
             style = MaterialTheme.typography.titleLarge
         )
 
@@ -46,30 +50,30 @@ fun HomeScreen(
         ) {
 
             StatCard(
-                title = "Plans",
+                title = stringResource(R.string.plans_count),
                 value = uiState.totalPlans.toString(),
                 modifier = Modifier.weight(1f)
             )
 
             StatCard(
-                title = "Workouts",
+                title = stringResource(R.string.workouts_count),
                 value = uiState.completedWorkouts.toString(),
                 modifier = Modifier.weight(1f)
             )
         }
 
         StatCard(
-            title = "Total Volume",
-            value = String.format(
-                Locale.getDefault(),
-                "%.1f kg",
+            title = stringResource(R.string.total_volume),
+            value = stringResource(R.string.volume_value, String.format(
+                LocalConfiguration.current.locales[0],
+                "%.1f",
                 uiState.totalVolumeKg
-            ),
+            )),
             modifier = Modifier.fillMaxWidth()
         )
 
         // ACTIVE WORKOUT
-        if (uiState.activePlanName != null) {
+        if (uiState.activePlanId != null) {
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -77,25 +81,28 @@ fun HomeScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Active Workout",
+                        text = stringResource(R.string.active_workout),
                         style = MaterialTheme.typography.titleMedium
                     )
 
                     Text(
-                        text = uiState.activePlanName
+                        text = uiState.activePlanName ?: stringResource(R.string.workout)
                     )
+                    Button(onClick = { onResumeWorkout(uiState.activePlanId) }) {
+                        Text(stringResource(R.string.resume_workout))
+                    }
                 }
             }
         }
 
         // TODAY'S WORKOUT
         Text(
-            text = "Today's Workout",
+            text = stringResource(R.string.today_workout),
             style = MaterialTheme.typography.titleLarge
         )
 
         if (uiState.todayPlans.isEmpty()) {
-            Text("Rest day scheduled for today")
+            Text(stringResource(R.string.rest_day))
         } else {
             uiState.todayPlans.forEach { plan ->
 
@@ -115,11 +122,11 @@ fun HomeScreen(
                         )
 
                         Text(
-                            text = "${plan.exercises.size} exercises"
+                            text = stringResource(R.string.exercise_count, plan.exercises.size)
                         )
 
                         Button(onClick = onOpenPlans) {
-                            Text("Open Plans")
+                            Text(stringResource(R.string.open_plans))
                         }
                     }
                 }
@@ -131,42 +138,14 @@ fun HomeScreen(
             onClick = onOpenPlans,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("My Workout Plans")
+            Text(stringResource(R.string.workout_plans))
         }
 
         OutlinedButton(
             onClick = onOpenHistory,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Workout History")
-        }
-    }
-}
-
-@Composable
-private fun StatCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-
-    Card(modifier = modifier) {
-
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement =
-                Arrangement.spacedBy(8.dp)
-        ) {
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall
-            )
+            Text(stringResource(R.string.workout_history))
         }
     }
 }
