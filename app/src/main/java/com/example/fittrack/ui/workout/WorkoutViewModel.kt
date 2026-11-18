@@ -14,7 +14,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
     init {
         viewModelScope.launch {
-            combine(repository.activeSession, repository.plans, repository.exercises) { session, plans, library ->
+            combine(repository.activeSession, repository.plans, repository.exercises, repository.sessions) { session, plans, library, _ ->
                 Triple(session, plans, library)
             }.collect { (session, plans, library) ->
                 val plan = plans.find { it.id == session?.planId }
@@ -27,7 +27,9 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                         val rows = exercise.sets.map { row ->
                             if (row.completed) row else drafts.find { it.number == row.number }?.copy(completed = false) ?: row
                         }
-                        exercise.copy(sets = rows + drafts.filter { draft -> rows.none { it.number == draft.number } })
+                        val previous = repository.getPreviousSets(exercise.id).associateBy { it.setNumber }
+                        val allRows = rows + drafts.filter { draft -> rows.none { it.number == draft.number } }
+                        exercise.copy(sets = allRows.map { it.copy(previous = previous[it.number]) })
                     }
                     _uiState.value = WorkoutUiState(session.id, plan.id, plan.name, exercises, old?.message)
                 }

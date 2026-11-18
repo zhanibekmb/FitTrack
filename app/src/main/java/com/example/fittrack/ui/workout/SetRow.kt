@@ -32,6 +32,13 @@ fun SetRow(
                 modifier = Modifier.semantics { contentDescription = description }
             )
         }
+        Text(
+            text = set.previous?.let {
+                stringResource(R.string.previous_set, weightInput(it.weightKg), it.reps)
+            } ?: stringResource(R.string.previous_set_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = set.weight, onValueChange = onWeightChange,
