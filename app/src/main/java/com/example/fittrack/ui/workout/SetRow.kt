@@ -49,6 +49,10 @@ fun SetRow(
                 value = set.reps, onValueChange = onRepsChange,
                 label = { Text(stringResource(R.string.repetitions)) },
                 enabled = canEditReps && !set.completed,
+                isError = set.showErrors && parsedReps(set.reps) == null,
+                supportingText = if (set.showErrors && parsedReps(set.reps) == null) {
+                    { Text(stringResource(R.string.positive_reps_required)) }
+                } else null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f)

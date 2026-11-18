@@ -4,6 +4,8 @@ import com.example.fittrack.data.model.CompletedSet
 import com.example.fittrack.data.model.Exercise
 import com.example.fittrack.data.model.WorkoutPlan
 
+internal fun parsedReps(value: String): Int? = value.trim().toIntOrNull()?.takeIf { it > 0 }
+
 internal fun parsedWeight(value: String): Double? = value.trim().replace(',', '.').toDoubleOrNull()
     ?.takeIf { it.isFinite() && it >= 0 }
 
