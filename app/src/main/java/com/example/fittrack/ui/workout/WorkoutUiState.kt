@@ -18,7 +18,7 @@ data class WorkoutExerciseUiState(
     val sets: List<WorkoutSetUiState>
 )
 
-enum class WorkoutMessage { INVALID_INPUT, SAVE_FAILED, EMPTY_WORKOUT, SESSION_UNAVAILABLE }
+enum class WorkoutMessage { INVALID_INPUT, SAVE_FAILED, EMPTY_WORKOUT, EMPTY_PLAN, SESSION_UNAVAILABLE }
 
 data class WorkoutUiState(
     val sessionId: String? = null,

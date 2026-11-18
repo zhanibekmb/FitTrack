@@ -101,6 +101,43 @@ class WorkoutViewModel(
         })
     }
 
+    fun startWorkout(planId: String): Boolean {
+        val plan = repository.plans.value.find { it.id == planId }
+        if (plan == null || plan.exercises.isEmpty()) {
+            _uiState.value = _uiState.value.copy(message = if (plan == null)
+                WorkoutMessage.SESSION_UNAVAILABLE else WorkoutMessage.EMPTY_PLAN)
+            return false
+        }
+        val active = repository.activeSession.value
+        val success = if (active == null) repository.startWorkout(planId) != null else active.planId == planId
+        if (!success) _uiState.value = _uiState.value.copy(message = WorkoutMessage.SESSION_UNAVAILABLE)
+        return success
+    }
+
+    fun finishWorkout(planId: String): Boolean {
+        val active = repository.activeSession.value
+        if (active == null || active.planId != planId || active.id != _uiState.value.sessionId) {
+            _uiState.value = _uiState.value.copy(message = WorkoutMessage.SESSION_UNAVAILABLE)
+            return false
+        }
+        if (repository.finishWorkout() == null) {
+            _uiState.value = _uiState.value.copy(message = WorkoutMessage.EMPTY_WORKOUT)
+            return false
+        }
+        timer.reset()
+        _uiState.value = WorkoutUiState()
+        return true
+    }
+
+    fun discardWorkout(planId: String): Boolean {
+        val active = repository.activeSession.value
+        if (active == null || active.planId != planId || active.id != _uiState.value.sessionId) return false
+        if (!repository.discardWorkout()) return false
+        timer.reset()
+        _uiState.value = WorkoutUiState()
+        return true
+    }
+
     private fun changeSet(exerciseId: String, number: Int, change: (WorkoutSetUiState) -> WorkoutSetUiState) {
         val state = _uiState.value
         if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return

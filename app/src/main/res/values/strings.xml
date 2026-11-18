@@ -82,4 +82,9 @@
     <string name="rest_start">Start / Resume</string>
     <string name="rest_reset">Reset</string>
     <string name="rest_skip">Skip rest</string>
+<string name="finish_workout">Finish Workout</string>
+    <string name="finish_workout_question">Save %1$d of %2$d sets? Only completed sets will be added to history.</string>
+    <string name="discard_workout">Discard Workout</string>
+    <string name="discard_workout_question">Discard this workout and all of its recorded sets? Your plan will stay unchanged.</string>
+    <string name="workout_empty_plan">Add an exercise to this plan before starting a workout.</string>
 </resources>

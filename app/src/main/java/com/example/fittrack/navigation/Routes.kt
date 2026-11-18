@@ -6,6 +6,10 @@ object Routes {
     const val HOME = "home"
     const val PLANS = "plans"
     const val HISTORY = "history"
+    const val EXERCISE_ID = "exerciseId"
+    const val EXERCISE_PROGRESS = "history/exercise/{exerciseId}"
+    fun exerciseProgress(exerciseId: String): String = "history/exercise/${Uri.encode(exerciseId)}"
+
     const val CREATE_PLAN = "plans/create"
     const val PLAN_DETAIL = "plans/detail/{planId}"
 

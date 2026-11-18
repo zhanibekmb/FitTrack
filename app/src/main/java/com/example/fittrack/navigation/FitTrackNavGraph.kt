@@ -16,12 +16,17 @@ import com.example.fittrack.R
 import com.example.fittrack.data.repository.FitTrackContainer
 import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
+import com.example.fittrack.ui.workout.*
+import com.example.fittrack.ui.history.*
 import kotlinx.coroutines.launch
 
 @Composable
 fun FitTrackNavGraph() {
     val navController = rememberNavController()
     val repository = FitTrackContainer.repository
+    // One active workout: keep drafts and its timer when its destination is popped.
+    val workoutViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(repository))
+    val emptyPlanMessage = stringResource(R.string.workout_empty_plan)
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val conflictMessage = stringResource(R.string.workout_conflict)
@@ -31,6 +36,7 @@ fun FitTrackNavGraph() {
         val active = repository.activeSession.value
         val message = when {
             repository.plans.value.none { it.id == planId } -> invalidMessage
+            repository.plans.value.first { it.id == planId }.exercises.isEmpty() -> emptyPlanMessage
             active != null && active.planId != planId -> conflictMessage
             active == null && repository.startWorkout(planId) == null -> invalidMessage
             else -> null
@@ -101,7 +107,18 @@ fun FitTrackNavGraph() {
                 )
             }
             composable(Routes.HISTORY) {
-                HistoryPlaceholderScreen(onBack = { navController.popBackStack() })
+                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(repository))
+                HistoryScreen(historyViewModel,
+                    onOpenExercise = { navController.navigate(Routes.exerciseProgress(it)) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = Routes.EXERCISE_PROGRESS,
+                arguments = listOf(navArgument(Routes.EXERCISE_ID) { type = NavType.StringType })
+            ) { entry ->
+                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(repository))
+                ExerciseProgressScreen(entry.arguments?.getString(Routes.EXERCISE_ID).orEmpty(), historyViewModel,
+                    onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.WORKOUT,
@@ -112,9 +129,11 @@ fun FitTrackNavGraph() {
                 if (planId.isNullOrBlank() || plans.none { it.id == planId }) {
                     InvalidPlanPlaceholderScreen(onBack = { navController.popBackStack() })
                 } else {
-                    WorkoutPlaceholderScreen(
+                    WorkoutScreen(
                         planId = planId,
-                        onBack = { navController.popBackStack() }
+                        viewModel = workoutViewModel,
+                        onBack = { navController.popBackStack() },
+                        onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) }
                     )
                 }
             }
