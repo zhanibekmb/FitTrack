@@ -59,6 +59,9 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (uiState.message == WorkoutMessage.EMPTY_WORKOUT) {
+                        Text(stringResource(R.string.workout_empty_finish), color = MaterialTheme.colorScheme.error)
+                    }
                     Button(onClick = {
                         if (uiState.completedSets == 0) viewModel.finishWorkout(planId) else confirmFinish = true
                     }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.finish_workout)) }
