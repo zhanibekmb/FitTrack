@@ -14,6 +14,7 @@ import com.example.fittrack.R
 @Composable
 fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val timerState by viewModel.restTimer.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
@@ -24,6 +25,10 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
             item {
                 Text(uiState.planName, style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.workout_set_count, uiState.completedSets, uiState.totalSets))
+            }
+            item {
+                RestTimerCard(timerState, viewModel::setRestDuration, viewModel::startRest,
+                    viewModel::pauseRest, viewModel::resetRest, viewModel::skipRest)
             }
             uiState.message?.let { message ->
                 item {

@@ -71,4 +71,15 @@
 <string name="add_set">Add Set</string>
 <string name="previous_set">Previous: %1$s kg × %2$d</string>
     <string name="previous_set_empty">Previous: —</string>
+<string name="rest_timer">Rest Timer</string>
+    <string name="rest_duration">Rest after each completed set: %1$d seconds</string>
+    <string name="rest_seconds">%1$d s</string>
+    <string name="rest_complete">Rest finished. Ready for your next set.</string>
+    <string name="rest_custom">Custom rest (seconds)</string>
+    <string name="rest_custom_error">Enter a whole number from 1 to 3600.</string>
+    <string name="rest_apply">Apply duration</string>
+    <string name="rest_pause">Pause</string>
+    <string name="rest_start">Start / Resume</string>
+    <string name="rest_reset">Reset</string>
+    <string name="rest_skip">Skip rest</string>
 </resources>
