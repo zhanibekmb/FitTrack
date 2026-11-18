@@ -1,6 +1,7 @@
 package com.example.fittrack.data.repository
 
 import com.example.fittrack.data.DemoData
+import com.example.fittrack.data.model.CompletedSet
 import com.example.fittrack.data.model.Exercise
 import com.example.fittrack.data.model.PlannedExercise
 import com.example.fittrack.data.model.WorkoutPlan
@@ -119,4 +120,141 @@ class WorkoutRepository {
 
         return true
     }
+
+    fun startWorkout(planId: String): WorkoutSession? {
+
+        // Check if another workout is active
+        if (_activeSession.value != null) {
+            return null
+        }
+
+        // Find selected plan
+        val plan = _plans.value.find {
+            it.id == planId
+        } ?: return null
+
+        // Create new workout session
+        val newSession = WorkoutSession(
+            id = UUID.randomUUID().toString(),
+            planId = plan.id,
+            startedAt = System.currentTimeMillis()
+        )
+
+        // Update active workout
+        _activeSession.value = newSession
+
+        return newSession
+    }
+
+    fun completeSet(
+        exerciseId: String,
+        setNumber: Int,
+        weightKg: Double,
+        reps: Int
+    ): Boolean {
+
+        // Check if workout is active
+        val session = _activeSession.value
+            ?: return false
+
+        // Validate input
+        if (setNumber <= 0 || reps <= 0) {
+            return false
+        }
+
+        if (!weightKg.isFinite() || weightKg < 0) {
+            return false
+        }
+
+        // Check exercise belongs to current plan
+        val plan = _plans.value.find {
+            it.id == session.planId
+        } ?: return false
+
+        val exerciseExists = plan.exercises.any {
+            it.exerciseId == exerciseId
+        }
+
+        if (!exerciseExists) {
+            return false
+        }
+
+        // Avoid duplicate set numbers
+        val alreadyCompleted = session.completedSets.any {
+            it.exerciseId == exerciseId &&
+                    it.setNumber == setNumber
+        }
+
+        if (alreadyCompleted) {
+            return false
+        }
+
+        // Create completed set
+        val completedSet = CompletedSet(
+            exerciseId = exerciseId,
+            setNumber = setNumber,
+            weightKg = weightKg,
+            reps = reps
+        )
+
+        // Update active session
+        _activeSession.value = session.copy(
+            completedSets =
+                session.completedSets + completedSet
+        )
+
+        return true
+    }
+
+    fun finishWorkout(): WorkoutSession? {
+
+        val session = _activeSession.value
+            ?: return null
+
+        // Do not save empty workouts
+        if (session.completedSets.isEmpty()) {
+            return null
+        }
+
+        val finishedSession = session.copy(
+            finishedAt = System.currentTimeMillis()
+        )
+
+        // Add workout to history
+        _sessions.update { currentSessions ->
+            currentSessions + finishedSession
+        }
+
+        // Clear active workout
+        _activeSession.value = null
+
+        return finishedSession
+    }
+
+
+    fun getPreviousSets(
+        exerciseId: String
+    ): List<CompletedSet> {
+
+        // Find latest completed session with exercise
+        val previousSession = _sessions.value
+            .asReversed()
+            .firstOrNull { session ->
+                session.completedSets.any {
+                    it.exerciseId == exerciseId
+                }
+            }
+
+        // Return completed sets for this exercise
+        return previousSession
+            ?.completedSets
+            ?.filter {
+                it.exerciseId == exerciseId
+            }
+            ?.sortedBy {
+                it.setNumber
+            }
+            .orEmpty()
+    }
+
 }
