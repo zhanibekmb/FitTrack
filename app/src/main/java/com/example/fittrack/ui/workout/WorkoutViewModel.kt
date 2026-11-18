@@ -94,8 +94,10 @@ class WorkoutViewModel(
         _uiState.value = state.copy(message = null, exercises = state.exercises.map { exercise ->
             if (exercise.id != exerciseId) exercise else {
                 val last = exercise.sets.last()
-                val next = last.copy(number = exercise.sets.maxOf { it.number } + 1,
-                    completed = false, showErrors = false, previous = null)
+                val nextNumber = exercise.sets.maxOf { it.number } + 1
+                val previous = repository.getPreviousSets(exerciseId).find { it.setNumber == nextNumber }
+                val next = last.copy(number = nextNumber,
+                    completed = false, showErrors = false, previous = previous)
                 exercise.copy(sets = exercise.sets + next)
             }
         })

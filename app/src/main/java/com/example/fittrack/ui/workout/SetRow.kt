@@ -18,9 +18,7 @@ fun SetRow(
     set: WorkoutSetUiState,
     onWeightChange: (String) -> Unit,
     onRepsChange: (String) -> Unit,
-    onCompletedChange: (Boolean) -> Unit,
-    canEditWeight: Boolean = false,
-    canEditReps: Boolean = false
+    onCompletedChange: (Boolean) -> Unit
 ) {
     val description = stringResource(R.string.set_completed_description, set.number)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -43,7 +41,7 @@ fun SetRow(
             OutlinedTextField(
                 value = set.weight, onValueChange = onWeightChange,
                 label = { Text(stringResource(R.string.weight_kg)) },
-                enabled = canEditWeight && !set.completed,
+                enabled = !set.completed,
                 isError = set.showErrors && parsedWeight(set.weight) == null,
                 supportingText = if (set.showErrors && parsedWeight(set.weight) == null) {
                     { Text(stringResource(R.string.valid_weight_required)) }
@@ -55,7 +53,7 @@ fun SetRow(
             OutlinedTextField(
                 value = set.reps, onValueChange = onRepsChange,
                 label = { Text(stringResource(R.string.repetitions)) },
-                enabled = canEditReps && !set.completed,
+                enabled = !set.completed,
                 isError = set.showErrors && parsedReps(set.reps) == null,
                 supportingText = if (set.showErrors && parsedReps(set.reps) == null) {
                     { Text(stringResource(R.string.positive_reps_required)) }

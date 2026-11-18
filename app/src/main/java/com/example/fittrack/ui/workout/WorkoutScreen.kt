@@ -54,9 +54,7 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
                     onWeightChange = { number, value -> viewModel.updateWeight(exercise.id, number, value) },
                     onRepsChange = { number, value -> viewModel.updateReps(exercise.id, number, value) },
                     onCompletedChange = { number, completed -> viewModel.setCompleted(exercise.id, number, completed) },
-                    onAddSet = { viewModel.addSet(exercise.id) },
-                    canEditWeight = true,
-                    canEditReps = true
+                    onAddSet = { viewModel.addSet(exercise.id) }
                 )
             }
             item {

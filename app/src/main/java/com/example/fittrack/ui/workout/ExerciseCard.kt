@@ -15,9 +15,7 @@ fun ExerciseCard(
     onWeightChange: (Int, String) -> Unit,
     onRepsChange: (Int, String) -> Unit,
     onCompletedChange: (Int, Boolean) -> Unit,
-    onAddSet: () -> Unit,
-    canEditWeight: Boolean = false,
-    canEditReps: Boolean = false
+    onAddSet: () -> Unit
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -26,7 +24,7 @@ fun ExerciseCard(
             exercise.sets.forEach { set ->
                 key(set.number) {
                     SetRow(set, { onWeightChange(set.number, it) }, { onRepsChange(set.number, it) },
-                        { onCompletedChange(set.number, it) }, canEditWeight, canEditReps)
+                        { onCompletedChange(set.number, it) })
                 }
             }
             OutlinedButton(onClick = onAddSet) { Text(stringResource(R.string.add_set)) }
