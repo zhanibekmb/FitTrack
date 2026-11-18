@@ -62,4 +62,6 @@
     <string name="history_set">Set %1$d · %2$.1f kg × %3$d</string>
     <string name="exercise_progress">Exercise Progress</string>
 <string name="workout_set_count">%1$d / %2$d sets completed</string>
+<string name="set_number">Set %1$d</string>
+    <string name="set_completed_description">Set %1$d completed</string>
 </resources>
