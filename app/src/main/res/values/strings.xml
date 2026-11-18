@@ -57,4 +57,8 @@
     <string name="search_plans">Search plans by name</string>
     <string name="clear_search">Clear</string>
     <string name="no_matching_plans">No plans match your search.</string>
+<string name="history_summary">%1$d completed workouts · %2$.1f kg total volume</string>
+    <string name="history_empty">Complete a set and finish a workout to see your results here.</string>
+    <string name="history_set">Set %1$d · %2$.1f kg × %3$d</string>
+    <string name="exercise_progress">Exercise Progress</string>
 </resources>

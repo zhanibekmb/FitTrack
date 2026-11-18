@@ -6,83 +6,39 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.fittrack.R
+import java.text.DateFormat
+import java.util.Date
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseProgressScreen(
-    exerciseId: String,
-    vm: HistoryViewModel,
-    onBack: () -> Unit
-) {
-    val sessions by vm.sessions.collectAsState()
-
-    val exerciseSets = sessions.map { session ->
-        session to session.exercises.filter { it.exerciseId == exerciseId && it.completed }
-    }.filter { it.second.isNotEmpty() }
-
-    val weights = exerciseSets.map { (_, sets) -> sets.maxOf { it.weightKg } }
-    val maxWeight = weights.maxOrNull() ?: 0.0
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Прогресс упражнения") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("← Назад")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Максимальный вес: ${maxWeight.toInt()} кг",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ProgressChart(values = weights)
-                    }
-                }
-            }
-
-            item {
-                Text(
-                    text = "История результатов",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-
-            if (exerciseSets.isEmpty()) {
-                item {
-                    Text("Пока нет выполненных подходов для этого упражнения.")
-                }
-            } else {
-                items (exerciseSets) { (session, sets) ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(text = session.date, style = MaterialTheme.typography.labelMedium)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            sets.forEach { set ->
-                                Text(text = "• Вес: ${set.weightKg} кг | Повторений: ${set.reps}")
-                            }
-                        }
+fun ExerciseProgressScreen(exerciseId: String, vm: HistoryViewModel, onBack: () -> Unit) {
+    val sessions by vm.sessions.collectAsStateWithLifecycle()
+    val exercises by vm.exercises.collectAsStateWithLifecycle()
+    val results = sessions.filter { it.isFinished }.sortedBy { it.finishedAt }.mapNotNull { session ->
+        val sets = session.completedSets.filter { it.exerciseId == exerciseId }
+        if (sets.isEmpty()) null else session to sets
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { Text(exercises.find { it.id == exerciseId }?.name ?: exerciseId, style = MaterialTheme.typography.headlineMedium) }
+        item { Text(stringResource(R.string.exercise_progress)) }
+        item { ProgressChart(results.map { (_, sets) -> sets.maxOf { it.weightKg } }) }
+        items(results, key = { it.first.id }) { (session, sets) ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(DateFormat.getDateInstance().format(Date(session.finishedAt ?: session.startedAt)))
+                    sets.sortedBy { it.setNumber }.forEach { set ->
+                        Text(stringResource(R.string.history_set, set.setNumber, set.weightKg, set.reps))
                     }
                 }
             }
         }
+        item { OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back)) } }
     }
 }
-
