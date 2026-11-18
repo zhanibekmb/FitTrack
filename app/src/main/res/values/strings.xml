@@ -1,3 +1,25 @@
 <resources>
     <string name="app_name">FitTrack</string>
+    <string name="tagline">Your workouts. Your progress.</string>
+    <string name="statistics">My Statistics</string>
+    <string name="plans_count">Plans</string>
+    <string name="workouts_count">Workouts</string>
+    <string name="total_volume">Total Volume</string>
+    <string name="active_workout">Active Workout</string>
+    <string name="today_workout">Today\'s Workout</string>
+    <string name="rest_day">No workout scheduled for today</string>
+    <string name="open_plans">Open Plans</string>
+    <string name="workout_plans">Workout Plans</string>
+    <string name="workout_history">Workout History</string>
+    <string name="start_workout">Start Workout</string>
+    <string name="back">Back</string>
+    <string name="history_pending">Workout history is being developed.</string>
+    <string name="workout_pending">Workout tracking is being developed.</string>
+    <string name="workout">Workout</string>
+    <string name="resume_workout">Resume Workout</string>
+    <string name="workout_conflict">Resume and finish your active workout before starting another plan.</string>
+    <string name="invalid_plan">This workout plan is unavailable.</string>
+    <string name="selected_plan">Selected plan ID: %1$s</string>
+    <string name="exercise_count">%1$d exercises</string>
+    <string name="volume_value">%1$s kg</string>
 </resources>

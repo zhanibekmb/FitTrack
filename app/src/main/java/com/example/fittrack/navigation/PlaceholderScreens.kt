@@ -15,6 +15,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.example.fittrack.R
 import androidx.compose.ui.unit.dp
 
 
@@ -33,7 +35,7 @@ fun PlansPlaceholderScreen(
     ) {
 
         Text(
-            text = "My Workout Plans",
+            text = stringResource(R.string.workout_plans),
             style = MaterialTheme.typography.headlineMedium
         )
 
@@ -54,7 +56,7 @@ fun PlansPlaceholderScreen(
                     )
 
                     Text(
-                        text = "${plan.exercises.size} exercises"
+                        text = stringResource(R.string.exercise_count, plan.exercises.size)
                     )
 
                     Button(
@@ -62,45 +64,19 @@ fun PlansPlaceholderScreen(
                             onStartWorkout(plan.id)
                         }
                     ) {
-                        Text("Start Workout")
+                        Text(stringResource(R.string.start_workout))
                     }
                 }
             }
         }
 
         OutlinedButton(onClick = onBack) {
-            Text("Back")
+            Text(stringResource(R.string.back))
         }
     }
 }
 
 
-
-@Composable
-fun PlansPlaceholderScreen(
-    onStartWorkout: (String) -> Unit,
-    onBack: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Text("My Workout Plans")
-
-        Button(
-            onClick = {
-                onStartWorkout("push-001")
-            }
-        ) {
-            Text("Start Push Day")
-        }
-
-        Button(onClick = onBack) {
-            Text("Back")
-        }
-    }
-}
 
 @Composable
 fun HistoryPlaceholderScreen(
@@ -113,14 +89,14 @@ fun HistoryPlaceholderScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Workout History",
+            text = stringResource(R.string.workout_history),
             style = MaterialTheme.typography.headlineMedium
         )
 
-        Text("Here will be your workout history.")
+        Text(stringResource(R.string.history_pending))
 
         OutlinedButton(onClick = onBack) {
-            Text("Back")
+            Text(stringResource(R.string.back))
         }
     }
 }
@@ -137,14 +113,28 @@ fun WorkoutPlaceholderScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Active Workout",
+            text = stringResource(R.string.active_workout),
             style = MaterialTheme.typography.headlineMedium
         )
 
-        Text("Selected plan ID: $planId")
+        Text(stringResource(R.string.selected_plan, planId))
+        Text(stringResource(R.string.workout_pending))
 
         OutlinedButton(onClick = onBack) {
-            Text("Back")
+            Text(stringResource(R.string.back))
+        }
+    }
+}
+
+@Composable
+fun InvalidPlanPlaceholderScreen(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(stringResource(R.string.invalid_plan))
+        OutlinedButton(onClick = onBack) {
+            Text(stringResource(R.string.back))
         }
     }
 }

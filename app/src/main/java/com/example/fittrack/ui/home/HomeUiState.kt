@@ -7,5 +7,6 @@ data class HomeUiState(
     val completedWorkouts: Int = 0,
     val totalVolumeKg: Double = 0.0,
     val todayPlans: List<WorkoutPlan> = emptyList(),
-    val activePlanName: String? = null
+    val activePlanName: String? = null,
+    val activePlanId: String? = null
 )
