@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.fittrack.navigation.FitTrackNavGraph
 import com.example.fittrack.ui.home.HomeScreen
 import com.example.fittrack.ui.theme.FitTrackTheme
 
@@ -20,7 +21,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FitTrackTheme {
-                HomeScreen()
+                FitTrackNavGraph()
             }
         }
     }
@@ -34,6 +35,6 @@ fun Greeting() {
 @Composable
 fun GreetingPreview() {
     FitTrackTheme {
-        HomeScreen()
+        FitTrackNavGraph()
     }
 }

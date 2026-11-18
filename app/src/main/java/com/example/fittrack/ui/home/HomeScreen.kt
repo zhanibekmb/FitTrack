@@ -3,10 +3,13 @@ package com.example.fittrack.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,7 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onOpenPlans: () -> Unit,
+    onOpenHistory: () -> Unit
+) {
     var showDescription by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = Modifier
@@ -37,12 +43,27 @@ fun HomeScreen() {
         )
 
         Button(
-            onClick = { showDescription = !showDescription }
+            onClick = onOpenPlans,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = if (showDescription) "Hide Description" else "How it works?"
-            )
+            Text("My Workout Plans")
         }
+
+        OutlinedButton(
+            onClick = onOpenHistory,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Workout History")
+        }
+
+        TextButton(
+            onClick = {
+                showDescription = !showDescription
+            }
+        ) {
+            Text("How it works?")
+        }
+
 
         if (showDescription){
             Text(
