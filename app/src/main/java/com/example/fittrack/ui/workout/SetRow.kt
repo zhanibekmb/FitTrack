@@ -37,6 +37,10 @@ fun SetRow(
                 value = set.weight, onValueChange = onWeightChange,
                 label = { Text(stringResource(R.string.weight_kg)) },
                 enabled = canEditWeight && !set.completed,
+                isError = set.showErrors && parsedWeight(set.weight) == null,
+                supportingText = if (set.showErrors && parsedWeight(set.weight) == null) {
+                    { Text(stringResource(R.string.valid_weight_required)) }
+                } else null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f)

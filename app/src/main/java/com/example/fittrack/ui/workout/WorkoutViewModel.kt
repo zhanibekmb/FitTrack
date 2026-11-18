@@ -35,6 +35,12 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
     }
 
+    fun updateWeight(exerciseId: String, number: Int, value: String) {
+        changeSet(exerciseId, number) { row ->
+            if (row.completed) row else row.copy(weight = value, showErrors = false)
+        }
+    }
+
     private fun changeSet(exerciseId: String, number: Int, change: (WorkoutSetUiState) -> WorkoutSetUiState) {
         val state = _uiState.value
         if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return

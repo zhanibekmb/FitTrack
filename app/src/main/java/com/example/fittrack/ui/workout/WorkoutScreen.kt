@@ -28,7 +28,8 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
             items(uiState.exercises, key = { it.id }) { exercise ->
                 ExerciseCard(
                     exercise = exercise,
-                    onWeightChange = { _, _ -> },
+                    onWeightChange = { number, value -> viewModel.updateWeight(exercise.id, number, value) },
+                    canEditWeight = true,
                     onRepsChange = { _, _ -> },
                     onCompletedChange = { _, _ -> }
                 )

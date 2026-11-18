@@ -4,6 +4,9 @@ import com.example.fittrack.data.model.CompletedSet
 import com.example.fittrack.data.model.Exercise
 import com.example.fittrack.data.model.WorkoutPlan
 
+internal fun parsedWeight(value: String): Double? = value.trim().replace(',', '.').toDoubleOrNull()
+    ?.takeIf { it.isFinite() && it >= 0 }
+
 internal fun weightInput(value: Double): String = value.toString().removeSuffix(".0")
 
 // Repeated entries share one card, with distinct set numbers and their own targets.
