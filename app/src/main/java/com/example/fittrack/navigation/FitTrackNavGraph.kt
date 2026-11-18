@@ -53,13 +53,36 @@ fun FitTrackNavGraph() {
         }
 
         // PLANS
+
         composable(Routes.PLANS) {
 
+            val plans by repository.plans
+                .collectAsStateWithLifecycle()
+
             PlansPlaceholderScreen(
+                plans = plans,
+
                 onStartWorkout = { planId ->
-                    navController.navigate(
-                        Routes.workout(planId)
-                    )
+
+                    val active = repository.activeSession.value
+
+                    if (active == null) {
+
+                        val session = repository.startWorkout(planId)
+
+                        if (session != null) {
+                            navController.navigate(
+                                Routes.workout(planId)
+                            )
+                        }
+
+                    } else if (active.planId == planId) {
+
+                        // Resume existing workout
+                        navController.navigate(
+                            Routes.workout(planId)
+                        )
+                    }
                 },
 
                 onBack = {
@@ -67,6 +90,7 @@ fun FitTrackNavGraph() {
                 }
             )
         }
+
 
         // HISTORY
         composable(Routes.HISTORY) {
