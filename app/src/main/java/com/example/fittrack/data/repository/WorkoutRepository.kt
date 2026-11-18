@@ -206,6 +206,16 @@ class WorkoutRepository {
         return true
     }
 
+    fun removeCompletedSet(exerciseId: String, setNumber: Int): Boolean {
+        val session = _activeSession.value ?: return false
+        val remaining = session.completedSets.filterNot {
+            it.exerciseId == exerciseId && it.setNumber == setNumber
+        }
+        if (remaining.size == session.completedSets.size) return false
+        _activeSession.value = session.copy(completedSets = remaining)
+        return true
+    }
+
     fun finishWorkout(): WorkoutSession? {
 
         val session = _activeSession.value

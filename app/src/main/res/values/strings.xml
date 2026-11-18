@@ -65,4 +65,7 @@
 <string name="set_number">Set %1$d</string>
     <string name="set_completed_description">Set %1$d completed</string>
 <string name="workout_recovery">No active workout for this plan. Return to the plan to start or resume a workout.</string>
+<string name="workout_invalid_input">Check the weight and repetitions before completing this set.</string>
+    <string name="workout_save_failed">Could not save the set. Check that this workout is still active.</string>
+    <string name="workout_empty_finish">Complete at least one set before finishing.</string>
 </resources>

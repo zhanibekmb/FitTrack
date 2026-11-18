@@ -25,6 +25,16 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
                 Text(uiState.planName, style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.workout_set_count, uiState.completedSets, uiState.totalSets))
             }
+            uiState.message?.let { message ->
+                item {
+                    Text(stringResource(when (message) {
+                        WorkoutMessage.INVALID_INPUT -> R.string.workout_invalid_input
+                        WorkoutMessage.SAVE_FAILED -> R.string.workout_save_failed
+                        WorkoutMessage.EMPTY_WORKOUT -> R.string.workout_empty_finish
+                        WorkoutMessage.SESSION_UNAVAILABLE -> R.string.workout_recovery
+                    }), color = MaterialTheme.colorScheme.error)
+                }
+            }
             items(uiState.exercises, key = { it.id }) { exercise ->
                 ExerciseCard(
                     exercise = exercise,
@@ -32,7 +42,7 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onBack: () -> Uni
                     canEditWeight = true,
                     onRepsChange = { number, value -> viewModel.updateReps(exercise.id, number, value) },
                     canEditReps = true,
-                    onCompletedChange = { _, _ -> }
+                    onCompletedChange = { number, completed -> viewModel.setCompleted(exercise.id, number, completed) }
                 )
             }
         } else {

@@ -47,6 +47,30 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
     }
 
+    fun setCompleted(exerciseId: String, number: Int, completed: Boolean) {
+        val state = _uiState.value
+        if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return
+        val row = state.exercises.find { it.id == exerciseId }?.sets?.find { it.number == number } ?: return
+        if (row.completed == completed) return
+        val weight = parsedWeight(row.weight)
+        val reps = parsedReps(row.reps)
+        if (completed && (weight == null || reps == null)) {
+            changeSet(exerciseId, number) { it.copy(showErrors = true) }
+            _uiState.value = _uiState.value.copy(message = WorkoutMessage.INVALID_INPUT)
+            return
+        }
+        val saved = if (completed) {
+            repository.completeSet(exerciseId, number, weight ?: return, reps ?: return)
+        } else {
+            repository.removeCompletedSet(exerciseId, number)
+        }
+        if (saved) {
+            changeSet(exerciseId, number) { it.copy(completed = completed, showErrors = false) }
+        } else {
+            _uiState.value = _uiState.value.copy(message = WorkoutMessage.SAVE_FAILED)
+        }
+    }
+
     private fun changeSet(exerciseId: String, number: Int, change: (WorkoutSetUiState) -> WorkoutSetUiState) {
         val state = _uiState.value
         if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return
