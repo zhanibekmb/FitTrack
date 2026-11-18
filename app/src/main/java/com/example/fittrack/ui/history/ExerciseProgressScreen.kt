@@ -70,7 +70,7 @@ fun ExerciseProgressScreen(
                     Text("Пока нет выполненных подходов для этого упражнения.")
                 }
             } else {
-                items(exerciseSets) { (session, sets) ->
+                items (exerciseSets) { (session, sets) ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(text = session.date, style = MaterialTheme.typography.labelMedium)
