@@ -64,4 +64,5 @@
 <string name="workout_set_count">%1$d / %2$d sets completed</string>
 <string name="set_number">Set %1$d</string>
     <string name="set_completed_description">Set %1$d completed</string>
+<string name="workout_recovery">No active workout for this plan. Return to the plan to start or resume a workout.</string>
 </resources>
