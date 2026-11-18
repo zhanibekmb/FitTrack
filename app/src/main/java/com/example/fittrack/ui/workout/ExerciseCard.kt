@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.example.fittrack.R
 
 @Composable
 fun ExerciseCard(
@@ -13,6 +15,7 @@ fun ExerciseCard(
     onWeightChange: (Int, String) -> Unit,
     onRepsChange: (Int, String) -> Unit,
     onCompletedChange: (Int, Boolean) -> Unit,
+    onAddSet: () -> Unit,
     canEditWeight: Boolean = false,
     canEditReps: Boolean = false
 ) {
@@ -26,6 +29,7 @@ fun ExerciseCard(
                         { onCompletedChange(set.number, it) }, canEditWeight, canEditReps)
                 }
             }
+            OutlinedButton(onClick = onAddSet) { Text(stringResource(R.string.add_set)) }
         }
     }
 }
