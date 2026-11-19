@@ -1,0 +1,18 @@
+*   [33me1b5a85[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #4 from zhanibekmb/feature/data-repository
+[31m|[m[32m\[m  
+[31m|[m * [33m99c95c2[m[33m ([m[1;31morigin/feature/data-repository[m[33m, [m[1;32mfeature/data-repository[m[33m)[m test(repository): add workout lifecycle unit tests
+[31m|[m * [33ma2d9e18[m feat(repository): implement workout session lifecycle
+[31m|[m * [33med7a98a[m feat(repository): add StateFlow storage and plan operations
+[31m|[m[31m/[m  
+*   [33m9388459[m Merge pull request #3 from zhanibekmb/feature/data-models
+[33m|[m[34m\[m  
+[33m|[m * [33mff2d000[m[33m ([m[1;31morigin/feature/data-models[m[33m, [m[1;32mfeature/data-models[m[33m)[m feat(data): add demo exercises and workout plans
+[33m|[m * [33m1bd42c6[m feat(model): add workout sessions and completed sets
+[33m|[m * [33m39b19b6[m feat(model): define exercises and workout plans
+[33m|[m[33m/[m  
+*   [33mebebfeb[m Merge pull request #2 from zhanibekmb/feature/navigation
+[35m|[m[36m\[m  
+[35m|[m * [33m87c2048[m[33m ([m[1;31morigin/feature/navigation[m[33m, [m[1;32mfeature/navigation[m[33m)[m feat(navigation): implement screen routing and planId
+[35m|[m * [33m7130d58[m feat: add PlaceholderScreen
+[35m|[m * [33m31d99cd[m build: add Navigation Compose dependency
+[35m|[m[35m/[m  
