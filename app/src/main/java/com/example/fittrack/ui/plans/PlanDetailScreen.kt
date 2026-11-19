@@ -17,7 +17,7 @@ import com.example.fittrack.R
 import com.example.fittrack.data.model.Exercise
 
 @Composable
-fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onBack: () -> Unit) {
+fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onStartWorkout: () -> Unit, onBack: () -> Unit) {
     val plans by viewModel.plans.collectAsStateWithLifecycle()
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
     val plan = plans.firstOrNull { it.id == planId }
@@ -33,6 +33,7 @@ fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onBack: () -> Un
                 Text(stringResource(R.string.add_exercise))
             }
             if (exercises.isEmpty()) Text(stringResource(R.string.no_catalog_exercises))
+            Button(onClick = onStartWorkout) { Text(stringResource(R.string.start_workout)) }
             LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 itemsIndexed(plan.exercises) { index, planned ->
                     val exercise = exercises.firstOrNull { it.id == planned.exerciseId }

@@ -15,6 +15,7 @@ import androidx.navigation.navArgument
 import com.example.fittrack.R
 import com.example.fittrack.data.repository.FitTrackContainer
 import com.example.fittrack.ui.home.*
+import com.example.fittrack.ui.plans.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -65,10 +66,37 @@ fun FitTrackNavGraph() {
                 )
             }
             composable(Routes.PLANS) {
-                val plans by repository.plans.collectAsStateWithLifecycle()
-                PlansPlaceholderScreen(
-                    plans = plans,
-                    onStartWorkout = { openWorkout(it) },
+                val plansViewModel: PlansViewModel = viewModel(factory = PlansViewModelFactory(repository))
+                PlansScreen(
+                    viewModel = plansViewModel,
+                    onOpenPlan = { navController.navigate(Routes.planDetail(it)) { launchSingleTop = true } },
+                    onCreatePlan = { navController.navigate(Routes.CREATE_PLAN) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.CREATE_PLAN) {
+                val plansViewModel: PlansViewModel = viewModel(factory = PlansViewModelFactory(repository))
+                CreatePlanScreen(
+                    viewModel = plansViewModel,
+                    onCreated = { id ->
+                        navController.navigate(Routes.planDetail(id)) {
+                            popUpTo(Routes.CREATE_PLAN) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.PLAN_DETAIL,
+                arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
+            ) { entry ->
+                val plansViewModel: PlansViewModel = viewModel(factory = PlansViewModelFactory(repository))
+                val planId = entry.arguments?.getString(Routes.PLAN_ID).orEmpty()
+                PlanDetailScreen(
+                    viewModel = plansViewModel,
+                    planId = planId,
+                    onStartWorkout = { openWorkout(planId) },
                     onBack = { navController.popBackStack() }
                 )
             }
