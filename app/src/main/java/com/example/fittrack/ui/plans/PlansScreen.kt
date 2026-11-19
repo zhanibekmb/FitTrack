@@ -20,12 +20,25 @@ import com.example.fittrack.R
 @Composable
 fun PlansScreen(viewModel: PlansViewModel, onOpenPlan: (String) -> Unit, onCreatePlan: () -> Unit, onBack: () -> Unit) {
     val plans by viewModel.plans.collectAsStateWithLifecycle()
+    var query by rememberSaveable { mutableStateOf("") }
+    val visiblePlans = plans.filter { it.name.contains(query.trim(), ignoreCase = true) }
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.workout_plans), style = MaterialTheme.typography.headlineMedium)
         Button(onClick = onCreatePlan) { Text(stringResource(R.string.create_plan)) }
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text(stringResource(R.string.search_plans)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = if (query.isNotEmpty()) {{
+                TextButton(onClick = { query = "" }) { Text(stringResource(R.string.clear_search)) }
+            }} else null
+        )
         if (plans.isEmpty()) Text(stringResource(R.string.no_plans))
+        else if (visiblePlans.isEmpty()) Text(stringResource(R.string.no_matching_plans))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
-            items(plans, key = { it.id }) { plan ->
+            items(visiblePlans, key = { it.id }) { plan ->
                 Card(Modifier.fillMaxWidth().clickable { onOpenPlan(plan.id) }) {
                     Column(Modifier.padding(16.dp)) {
                         Text(plan.name, style = MaterialTheme.typography.titleLarge)

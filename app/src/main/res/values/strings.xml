@@ -54,4 +54,7 @@
     <string name="positive_sets_required">Enter a positive whole number of sets.</string>
     <string name="positive_reps_required">Enter a positive whole number of repetitions.</string>
     <string name="valid_weight_required">Enter a finite weight of zero or more.</string>
+    <string name="search_plans">Search plans by name</string>
+    <string name="clear_search">Clear</string>
+    <string name="no_matching_plans">No plans match your search.</string>
 </resources>
