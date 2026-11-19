@@ -1,49 +1,19 @@
-package com.example.fittrack.ui.history
+﻿package com.example.fittrack.ui.history
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.ViewModelProvider
+import com.example.fittrack.data.repository.WorkoutRepository
 
-data class WorkoutSession(
-    val id: String,
-    val date: String,
-    val durationMinutes: Int,
-    val exercises: List<ExerciseSet>
-)
+class HistoryViewModel(repository: WorkoutRepository) : ViewModel() {
+    val sessions = repository.sessions
+    val plans = repository.plans
+    val exercises = repository.exercises
+}
 
-data class ExerciseSet(
-    val exerciseId: String,
-    val exerciseName: String,
-    val weightKg: Double,
-    val reps: Int,
-    val completed: Boolean
-)
-
-class HistoryViewModel : ViewModel() {
-    private val _sessions = MutableStateFlow<List<WorkoutSession>>(emptyList())
-    val sessions: StateFlow<List<WorkoutSession>> = _sessions.asStateFlow()
-
-    init {
-        // Моковые данные для стабильной работы и отображения графиков
-        _sessions.value = listOf(
-            WorkoutSession(
-                id = "1",
-                date = "12 октября 2026",
-                durationMinutes = 45,
-                exercises = listOf(
-                    ExerciseSet("ex_bench", "Жим лежа", 60.0, 10, true),
-                    ExerciseSet("ex_bench", "Жим лежа", 65.0, 8, true)
-                )
-            ),
-            WorkoutSession(
-                id = "2",
-                date = "15 октября 2026",
-                durationMinutes = 50,
-                exercises = listOf(
-                    ExerciseSet("ex_bench", "Жим лежа", 70.0, 6, true)
-                )
-            )
-        )
+class HistoryViewModelFactory(private val repository: WorkoutRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        require(modelClass.isAssignableFrom(HistoryViewModel::class.java))
+        @Suppress("UNCHECKED_CAST")
+        return HistoryViewModel(repository) as T
     }
 }

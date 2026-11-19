@@ -6,7 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.example.fittrack.R
 import com.example.fittrack.ui.components.StatCard
@@ -27,11 +27,6 @@ fun HomeScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineLarge
-        )
 
         Text(
             text = stringResource(R.string.tagline),
@@ -65,7 +60,7 @@ fun HomeScreen(
         StatCard(
             title = stringResource(R.string.total_volume),
             value = stringResource(R.string.volume_value, String.format(
-                LocalConfiguration.current.locales[0],
+                Locale.ENGLISH,
                 "%.1f",
                 uiState.totalVolumeKg
             )),
@@ -122,7 +117,7 @@ fun HomeScreen(
                         )
 
                         Text(
-                            text = stringResource(R.string.exercise_count, plan.exercises.size)
+                            text = androidx.compose.ui.res.pluralStringResource(R.plurals.plans_exercise_count, plan.exercises.size, plan.exercises.size)
                         )
 
                         Button(onClick = onOpenPlans) {

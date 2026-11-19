@@ -1,6 +1,9 @@
 package com.example.fittrack.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -16,6 +19,9 @@ import com.example.fittrack.R
 import com.example.fittrack.data.repository.FitTrackContainer
 import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
+import com.example.fittrack.ui.history.*
+import com.example.fittrack.ui.workout.WorkoutScreen
+import com.example.fittrack.ui.components.FitTrackAppBar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -26,12 +32,25 @@ fun FitTrackNavGraph() {
     val scope = rememberCoroutineScope()
     val conflictMessage = stringResource(R.string.workout_conflict)
     val invalidMessage = stringResource(R.string.invalid_plan)
+    val emptyMessage = stringResource(R.string.empty_plan_hint)
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val route = backStackEntry?.destination?.route ?: Routes.HOME
+    val title = stringResource(when (route) {
+        Routes.PLANS -> R.string.workout_plans
+        Routes.CREATE_PLAN -> R.string.create_plan
+        Routes.PLAN_DETAIL -> R.string.workout
+        Routes.HISTORY -> R.string.workout_history
+        Routes.EXERCISE_PROGRESS -> R.string.exercise_progress
+        Routes.WORKOUT -> R.string.active_workout
+        else -> R.string.app_name
+    })
 
     fun openWorkout(planId: String) {
         val active = repository.activeSession.value
         val message = when {
             repository.plans.value.none { it.id == planId } -> invalidMessage
             active != null && active.planId != planId -> conflictMessage
+            active == null && repository.plans.value.find { it.id == planId }?.exercises.isNullOrEmpty() -> emptyMessage
             active == null && repository.startWorkout(planId) == null -> invalidMessage
             else -> null
         }
@@ -43,11 +62,14 @@ fun FitTrackNavGraph() {
     }
 
     // Apply system-bar insets once for all current screens.
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(
+        topBar = { FitTrackAppBar(title, if (route == Routes.HOME) null else ({ navController.popBackStack(); Unit })) },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding)
         ) {
             composable(Routes.HOME) {
                 val homeViewModel: HomeViewModel = viewModel(
@@ -70,8 +92,7 @@ fun FitTrackNavGraph() {
                 PlansScreen(
                     viewModel = plansViewModel,
                     onOpenPlan = { navController.navigate(Routes.planDetail(it)) { launchSingleTop = true } },
-                    onCreatePlan = { navController.navigate(Routes.CREATE_PLAN) { launchSingleTop = true } },
-                    onBack = { navController.popBackStack() }
+                    onCreatePlan = { navController.navigate(Routes.CREATE_PLAN) { launchSingleTop = true } }
                 )
             }
             composable(Routes.CREATE_PLAN) {
@@ -83,8 +104,7 @@ fun FitTrackNavGraph() {
                             popUpTo(Routes.CREATE_PLAN) { inclusive = true }
                             launchSingleTop = true
                         }
-                    },
-                    onBack = { navController.popBackStack() }
+                    }
                 )
             }
             composable(
@@ -96,12 +116,19 @@ fun FitTrackNavGraph() {
                 PlanDetailScreen(
                     viewModel = plansViewModel,
                     planId = planId,
-                    onStartWorkout = { openWorkout(planId) },
-                    onBack = { navController.popBackStack() }
+                    onStartWorkout = { openWorkout(planId) }
                 )
             }
             composable(Routes.HISTORY) {
-                HistoryPlaceholderScreen(onBack = { navController.popBackStack() })
+                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(repository))
+                HistoryScreen(historyViewModel, openExercise = {
+                    navController.navigate(Routes.exerciseProgress(it)) { launchSingleTop = true }
+                })
+            }
+            composable(Routes.EXERCISE_PROGRESS,
+                arguments = listOf(navArgument(Routes.EXERCISE_ID) { type = NavType.StringType })) { entry ->
+                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(repository))
+                ExerciseProgressScreen(entry.arguments?.getString(Routes.EXERCISE_ID).orEmpty(), historyViewModel)
             }
             composable(
                 route = Routes.WORKOUT,
@@ -110,11 +137,13 @@ fun FitTrackNavGraph() {
                 val planId = entry.arguments?.getString(Routes.PLAN_ID)
                 val plans by repository.plans.collectAsStateWithLifecycle()
                 if (planId.isNullOrBlank() || plans.none { it.id == planId }) {
-                    InvalidPlanPlaceholderScreen(onBack = { navController.popBackStack() })
+                    Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
                 } else {
-                    WorkoutPlaceholderScreen(
+                    WorkoutScreen(
                         planId = planId,
-                        onBack = { navController.popBackStack() }
+                        repository = repository,
+                        onStart = { openWorkout(planId) },
+                        onFinished = { navController.popBackStack() }
                     )
                 }
             }

@@ -12,6 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.example.fittrack.R
+import java.util.Locale
 
 /** Simple chart without a third-party chart library: one point per completed workout. */
 @Composable
@@ -19,17 +24,19 @@ fun ProgressChart(values: List<Double>) {
     val accent = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.outlineVariant
     if (values.isEmpty()) {
-        Text("Пока нет результатов для графика")
+        Text(stringResource(R.string.no_chart_results))
         return
     }
     val highest = (values.maxOrNull() ?: 0.0).coerceAtLeast(minimumValue = 1.0)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "Рабочий вес по тренировкам · максимум ${highest.toInt()} кг",
+            stringResource(R.string.chart_caption, values.maxOrNull() ?: 0.0),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Canvas(Modifier.fillMaxWidth().height(190.dp)) {
+        val description = stringResource(R.string.chart_description,
+            values.joinToString(", ") { String.format(Locale.ENGLISH, "%.1f", it) })
+        Canvas(Modifier.fillMaxWidth().height(190.dp).semantics { contentDescription = description }) {
             val left = 16.dp.toPx()
             val right = size.width - 16.dp.toPx()
             val top = 14.dp.toPx()
