@@ -68,6 +68,13 @@ private fun AddExerciseDialog(
     var reps by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var saveError by remember { mutableStateOf(false) }
+    var attempted by remember { mutableStateOf(false) }
+    val parsedSets = sets.toIntOrNull()
+    val parsedReps = reps.toIntOrNull()
+    val parsedWeight = weight.trim().replace(',', '.').toDoubleOrNull()
+    val setsInvalid = parsedSets == null || parsedSets <= 0
+    val repsInvalid = parsedReps == null || parsedReps <= 0
+    val weightInvalid = parsedWeight == null || !parsedWeight.isFinite() || parsedWeight < 0
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.add_exercise)) },
@@ -86,19 +93,24 @@ private fun AddExerciseDialog(
                         }
                     }
                 }
-                OutlinedTextField(sets, { sets = it }, label = { Text(stringResource(R.string.sets)) })
-                OutlinedTextField(reps, { reps = it }, label = { Text(stringResource(R.string.repetitions)) })
-                OutlinedTextField(weight, { weight = it }, label = { Text(stringResource(R.string.weight_kg)) })
+                OutlinedTextField(sets, { sets = it }, label = { Text(stringResource(R.string.sets)) },
+                    isError = attempted && setsInvalid,
+                    supportingText = if (attempted && setsInvalid) {{ Text(stringResource(R.string.positive_sets_required)) }} else null)
+                OutlinedTextField(reps, { reps = it }, label = { Text(stringResource(R.string.repetitions)) },
+                    isError = attempted && repsInvalid,
+                    supportingText = if (attempted && repsInvalid) {{ Text(stringResource(R.string.positive_reps_required)) }} else null)
+                OutlinedTextField(weight, { weight = it }, label = { Text(stringResource(R.string.weight_kg)) },
+                    isError = attempted && weightInvalid,
+                    supportingText = if (attempted && weightInvalid) {{ Text(stringResource(R.string.valid_weight_required)) }} else null)
                 if (saveError) Text(stringResource(R.string.add_exercise_failed), color = MaterialTheme.colorScheme.error)
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                val parsedSets = sets.toIntOrNull()
-                val parsedReps = reps.toIntOrNull()
-                val parsedWeight = weight.replace(',', '.').toDoubleOrNull()
-                saveError = parsedSets == null || parsedReps == null || parsedWeight == null ||
-                    !onSave(selectedId, parsedSets, parsedReps, parsedWeight)
+                attempted = true
+                if (!setsInvalid && !repsInvalid && !weightInvalid && parsedSets != null && parsedReps != null && parsedWeight != null) {
+                    saveError = !onSave(selectedId, parsedSets, parsedReps, parsedWeight)
+                }
             }) { Text(stringResource(R.string.save)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }

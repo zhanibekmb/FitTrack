@@ -51,4 +51,7 @@
     <string name="add_exercise_failed">Could not add this exercise. Check the plan and targets.</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
+    <string name="positive_sets_required">Enter a positive whole number of sets.</string>
+    <string name="positive_reps_required">Enter a positive whole number of repetitions.</string>
+    <string name="valid_weight_required">Enter a finite weight of zero or more.</string>
 </resources>
