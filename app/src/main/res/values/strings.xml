@@ -22,4 +22,18 @@
     <string name="selected_plan">Selected plan ID: %1$s</string>
     <string name="exercise_count">%1$d exercises</string>
     <string name="volume_value">%1$s kg</string>
+    <string name="create_plan">Create Plan</string>
+    <string name="no_plans">No workout plans yet.</string>
+    <string name="monday">Monday</string>
+    <string name="tuesday">Tuesday</string>
+    <string name="wednesday">Wednesday</string>
+    <string name="thursday">Thursday</string>
+    <string name="friday">Friday</string>
+    <string name="saturday">Saturday</string>
+    <string name="sunday">Sunday</string>
+    <string name="unknown_day">Unknown day</string>
+    <plurals name="plans_exercise_count">
+        <item quantity="one">%1$d exercise</item>
+        <item quantity="other">%1$d exercises</item>
+    </plurals>
 </resources>
