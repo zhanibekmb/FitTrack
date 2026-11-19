@@ -36,4 +36,6 @@
         <item quantity="one">%1$d exercise</item>
         <item quantity="other">%1$d exercises</item>
     </plurals>
+    <string name="plan_name">Plan name</string>
+    <string name="plan_name_required">Enter a plan name.</string>
 </resources>

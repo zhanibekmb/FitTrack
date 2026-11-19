@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -46,4 +49,27 @@ fun dayName(dayOfWeek: Int): String = when (dayOfWeek) {
     6 -> stringResource(R.string.saturday)
     7 -> stringResource(R.string.sunday)
     else -> stringResource(R.string.unknown_day)
+}
+
+@Composable
+fun CreatePlanScreen(viewModel: PlansViewModel, onCreated: (String) -> Unit, onBack: () -> Unit) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var submitted by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(stringResource(R.string.create_plan), style = MaterialTheme.typography.headlineMedium)
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it; submitted = false },
+            label = { Text(stringResource(R.string.plan_name)) },
+            isError = submitted && name.isBlank(),
+            supportingText = if (submitted && name.isBlank()) {{ Text(stringResource(R.string.plan_name_required)) }} else null,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Button(onClick = {
+            submitted = true
+            val cleanName = name.trim()
+            if (cleanName.isNotEmpty()) onCreated(viewModel.createPlan(cleanName, 1).id)
+        }) { Text(stringResource(R.string.create_plan)) }
+        OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back)) }
+    }
 }
