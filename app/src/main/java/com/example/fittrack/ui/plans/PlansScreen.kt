@@ -55,6 +55,8 @@ fun dayName(dayOfWeek: Int): String = when (dayOfWeek) {
 fun CreatePlanScreen(viewModel: PlansViewModel, onCreated: (String) -> Unit, onBack: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
+    var day by rememberSaveable { mutableStateOf(1) }
+    var dayMenuOpen by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.create_plan), style = MaterialTheme.typography.headlineMedium)
         OutlinedTextField(
@@ -65,10 +67,23 @@ fun CreatePlanScreen(viewModel: PlansViewModel, onCreated: (String) -> Unit, onB
             supportingText = if (submitted && name.isBlank()) {{ Text(stringResource(R.string.plan_name_required)) }} else null,
             modifier = Modifier.fillMaxWidth()
         )
+        Box {
+            OutlinedButton(onClick = { dayMenuOpen = true }) {
+                Text(stringResource(R.string.training_day, dayName(day)))
+            }
+            DropdownMenu(expanded = dayMenuOpen, onDismissRequest = { dayMenuOpen = false }) {
+                (1..7).forEach { option ->
+                    DropdownMenuItem(text = { Text(dayName(option)) }, onClick = {
+                        day = option
+                        dayMenuOpen = false
+                    })
+                }
+            }
+        }
         Button(onClick = {
             submitted = true
             val cleanName = name.trim()
-            if (cleanName.isNotEmpty()) onCreated(viewModel.createPlan(cleanName, 1).id)
+            if (cleanName.isNotEmpty()) onCreated(viewModel.createPlan(cleanName, day).id)
         }) { Text(stringResource(R.string.create_plan)) }
         OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back)) }
     }

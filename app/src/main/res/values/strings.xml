@@ -38,4 +38,5 @@
     </plurals>
     <string name="plan_name">Plan name</string>
     <string name="plan_name_required">Enter a plan name.</string>
+    <string name="training_day">Training day: %1$s</string>
 </resources>
