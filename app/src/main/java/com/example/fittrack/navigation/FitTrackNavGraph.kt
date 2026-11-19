@@ -20,7 +20,7 @@ import com.example.fittrack.data.repository.FitTrackContainer
 import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
 import com.example.fittrack.ui.history.*
-import com.example.fittrack.ui.workout.WorkoutScreen
+import com.example.fittrack.ui.workout.*
 import com.example.fittrack.ui.components.FitTrackAppBar
 import kotlinx.coroutines.launch
 
@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 fun FitTrackNavGraph() {
     val navController = rememberNavController()
     val repository = FitTrackContainer.repository
+    val workoutViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(repository))
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val conflictMessage = stringResource(R.string.workout_conflict)
@@ -141,9 +142,8 @@ fun FitTrackNavGraph() {
                 } else {
                     WorkoutScreen(
                         planId = planId,
-                        repository = repository,
-                        onStart = { openWorkout(planId) },
-                        onFinished = { navController.popBackStack() }
+                        viewModel = workoutViewModel,
+                        onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) }
                     )
                 }
             }

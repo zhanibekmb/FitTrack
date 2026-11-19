@@ -1,33 +1,58 @@
-﻿# FitTrack integration
+# FitTrack integration contracts
 
-All destinations use the shared `FitTrackContainer.repository`: Home, Plans, Create Plan, Plan Details, Workout, History, and Exercise Progress.
+Home, planning, workout tracking, history, and exercise progress are connected in
+`FitTrackNavGraph`. All use `FitTrackContainer.repository`.
 
-## Contracts
+## Shared state and navigation
 
-- Construct ViewModels with the shared repository and the destination ViewModel store owner. Do not create repositories inside screens.
-- Navigation owns workout start/resume and conflict messages. Back leaves the current session active; Finish Workout saves its completed sets and clears the session.
-- Empty plans cannot start through navigation. Empty sessions cannot finish. Validate finite nonnegative weights and positive whole-number repetitions and sets.
-- History observes repository sessions and displays only finished workouts. Charts use completed weights in chronological order, with one best-weight point per workout.
-- Repository data is held in memory. Activity recreation preserves it; process death resets plans and workout history to demo data.
-- Route arguments are decoded by Navigation. Use route builders to encode identifiers once.
-- Collect StateFlow with `collectAsStateWithLifecycle`. Do not mutate the repository during composition.
-- The root Scaffold owns the app bar and system-bar insets. Screens own scrollable content padding, and forms handle keyboard insets.
-- Schedule convention: Monday = 1, Sunday = 7. Home refreshes the local day every 30 seconds while observed.
-- Repository mutations are intended for sequential UI actions.
+- Construct Home, Plans, and History ViewModels with their factories at destinations.
+- Construct the single `WorkoutViewModel` above `NavHost`, using the graph's
+  inherited Activity owner. This deliberately keeps drafts, added rows, and the
+  timer alive when Back pops the workout destination. Rotation keeps this owner.
+- Do not instantiate a repository inside a screen or ViewModel.
+- Navigation owns normal start/resume and conflict feedback. The workout screen
+  only starts a session through an explicit recovery action if no session exists.
+- The workout screen verifies its route's `planId` against the active session.
+  Finishing/discarding also verifies the session ID before changing repository data.
+- Back does not finish a session. Successful finish saves checked sets to history;
+  confirmed discard clears the session without adding history. Empty plans cannot start.
+- Empty workouts cannot finish. Finishing a partially completed plan is allowed
+  after confirmation and stores only completed sets.
+- Use `Routes.workout(id)`, `Routes.planDetail(id)`, and `Routes.exerciseProgress(id)`
+  to build routes. Navigation decodes arguments; do not decode them a second time.
+- Collect StateFlow using `collectAsStateWithLifecycle`. Do not mutate the repository
+  during composition. The graph applies the common Material app bar and system-bar
+  padding once; child screens do not add duplicate headers or Back buttons.
+- Monday = 1, Sunday = 7. Dashboard refreshes the local day while observed.
 
-## Language and styling
+## Workout results
 
-App resources and bundled component resources are English only. MainActivity supplies an English resource configuration independently of the device language. Dates and chart descriptions explicitly use English formatting. User-entered plan names are preserved.
+- Shared models live in `data.model`. History must not define a second session model.
+- `CompletedSet` represents a confirmed result, keyed by exercise ID and set number.
+- `completeSet` rejects invalid numbers, exercises outside the current plan, and duplicates.
+- `removeCompletedSet` supports unchecking and correction. Completed fields are otherwise locked.
+- Repeated plan entries for one exercise are combined into a card with consecutive
+  set numbers, preserving the targets of each entry.
+- Extra rows and unconfirmed input are ViewModel state. They never change plan targets.
+- Previous comes from the latest finished session with the exercise, across all plans;
+  match by set number and display a dash when no previous result exists.
+- History and dashboard statistics use completed results, never planned weights/reps.
 
-Use Material 3 components, theme color roles, the Material typography scale, shared shapes, 20 dp screen padding, 16 dp card padding, and 8/12/16 dp spacing. Android 12+ uses system dynamic colors; older versions use the green palette. Support both light and dark themes.
+## Lifetime and limits
+
+The repository is in memory and intended for sequential UI actions. Its flows do
+not provide atomic multi-thread transactions. Process death resets plans/history
+to demo data and clears the session. A restored workout route therefore offers
+explicit recovery. No database or background timer notifications are included.
+
+The rest timer uses elapsed real time and a monotonic deadline. It remains active
+when navigating to another screen while the application process survives.
 
 ## Validation
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
-.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain
+.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-configuration-cache --console=plain
 ```
 
-The connected test requires a running emulator or device. It verifies recording a set, finishing, opening history and progress, and English app resources. Unit tests cover repository validation, dashboard statistics, and shared history data.
-
-Manual checks: launch with a non-English device language; check light/dark themes, landscape, large fonts, search, plan creation, exercise input validation, rest timer, active-workout conflicts, back/resume, and process-death recovery.
+See `WORKOUT_MODULE.md` for the branch map and manual checks on API 24+ devices.
