@@ -107,4 +107,8 @@
     <string name="discard_workout">Discard Workout</string>
     <string name="discard_workout_question">Discard this workout and all of its recorded sets? Your plan will stay unchanged.</string>
     <string name="workout_empty_plan">Add an exercise to this plan before starting a workout.</string>
+    <string name="edit_plan">Edit plan</string>
+    <string name="delete_plan">Delete plan</string>
+    <string name="delete_plan_confirmation">Delete %1$s? Completed workouts will stay in history.</string>
+    <string name="delete_active_plan_hint">Finish the active workout before deleting this plan.</string>
 </resources>

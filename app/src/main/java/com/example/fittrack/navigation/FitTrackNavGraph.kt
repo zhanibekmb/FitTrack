@@ -16,6 +16,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.fittrack.R
+import com.example.fittrack.data.repository.FitTrackContainer
+import kotlinx.coroutines.delay
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -50,11 +52,15 @@ fun FitTrackNavGraph() {
     })
 
     fun openWorkout(planId: String) {
-        val message = when (workoutViewModel.startOrResume(planId)) {
-            WorkoutStartResult.INVALID_PLAN -> invalidMessage
-            WorkoutStartResult.OTHER_WORKOUT_ACTIVE -> conflictMessage
-            WorkoutStartResult.EMPTY_PLAN -> emptyMessage
-            WorkoutStartResult.READY -> null
+        val data = repository.data.value
+        val plan = data.plans.find { it.id == planId }
+        val active = data.activeSession
+        val message = when {
+            plan == null -> invalidMessage
+            active != null && active.planId != planId -> conflictMessage
+            active == null && plan.exercises.isEmpty() -> emptyMessage
+            !workoutViewModel.startWorkout(planId) -> invalidMessage
+            else -> null
         }
         if (message != null) {
             scope.launch { snackbar.showSnackbar(message) }
@@ -161,8 +167,8 @@ fun FitTrackNavGraph() {
                 arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
             ) { entry ->
                 val planId = entry.arguments?.getString(Routes.PLAN_ID)
-                val plans by repository.plans.collectAsStateWithLifecycle()
-                if (planId.isNullOrBlank() || plans.none { it.id == planId }) {
+                val data by repository.data.collectAsStateWithLifecycle()
+                if (planId.isNullOrBlank() || data.plans.none { it.id == planId }) {
                     Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
                 } else {
                     WorkoutScreen(
