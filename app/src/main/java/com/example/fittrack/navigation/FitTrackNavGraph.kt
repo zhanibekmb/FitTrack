@@ -25,11 +25,14 @@ import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
 import com.example.fittrack.ui.history.*
 import com.example.fittrack.ui.workout.*
+import com.example.fittrack.data.model.ThemeMode
+import com.example.fittrack.ui.settings.SettingsScreen
+import com.example.fittrack.ui.settings.SettingsUiState
 import com.example.fittrack.ui.components.FitTrackAppBar
 import kotlinx.coroutines.launch
 
 @Composable
-fun FitTrackNavGraph() {
+fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Unit) {
     val navController = rememberNavController()
     val repository = FitTrackContainer.repository
     val workoutViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(repository))
@@ -41,6 +44,7 @@ fun FitTrackNavGraph() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route ?: Routes.HOME
     val title = stringResource(when (route) {
+        Routes.SETTINGS -> R.string.settings
         Routes.PLANS -> R.string.workout_plans
         Routes.CREATE_PLAN -> R.string.create_plan
         Routes.EDIT_PLAN -> R.string.edit_plan
@@ -100,8 +104,14 @@ fun FitTrackNavGraph() {
                     onOpenHistory = {
                         navController.navigate(Routes.HISTORY) { launchSingleTop = true }
                     },
-                    onResumeWorkout = { openWorkout(it) }
+                    onResumeWorkout = { openWorkout(it) },
+                    onOpenSettings = {
+                        navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                    }
                 )
+            }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(settings, onSelectTheme)
             }
             composable(Routes.PLANS) {
                 val plansViewModel: PlansViewModel = viewModel()
