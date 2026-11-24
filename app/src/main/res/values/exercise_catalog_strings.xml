@@ -21,4 +21,7 @@
     <string name="exercise_catalog_service_error">wger could not load exercises right now.</string>
     <string name="exercise_catalog_invalid_response">wger returned exercise data that could not be read.</string>
     <string name="exercise_catalog_retry">Retry</string>
+    <string name="exercise_catalog_image_alt">Exercise image for %1$s</string>
+    <string name="exercise_catalog_image_credit">Image credits</string>
+    <string name="exercise_catalog_original_image">Original image on wger</string>
 </resources>
