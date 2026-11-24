@@ -12,6 +12,8 @@ data class CatalogExercise(
     val id: String get() = "wger:$wgerId"
     val muscleGroup: String?
         get() = muscles.takeIf { it.isNotEmpty() }?.joinToString() ?: category
+
+    internal fun toWorkoutExercise() = Exercise(id, name, muscleGroup.orEmpty(), equipment)
 }
 
 data class CatalogImage(

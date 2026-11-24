@@ -25,6 +25,7 @@ fun PlanDetailScreen(
     viewModel: PlansViewModel,
     planId: String,
     onStartWorkout: () -> Unit,
+    onOpenExerciseCatalog: () -> Unit,
     onEditPlan: () -> Unit,
     onDeleted: () -> Unit
 ) {
@@ -47,10 +48,18 @@ fun PlanDetailScreen(
                 if (plan.exercises.isEmpty()) Text(stringResource(R.string.empty_plan_hint), style = MaterialTheme.typography.bodyMedium)
             }
             item {
-                FilledTonalButton(onClick = { showAdd = true }, enabled = exercises.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.add_exercise))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FilledTonalButton(onClick = onOpenExerciseCatalog, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.add_exercise))
+                    }
+                    OutlinedButton(
+                        onClick = { showAdd = true },
+                        enabled = exercises.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.exercise_catalog_saved_exercise))
+                    }
                 }
-                if (exercises.isEmpty()) Text(stringResource(R.string.no_catalog_exercises))
             }
             items(plan.exercises) { planned ->
                 val exercise = exercises.firstOrNull { it.id == planned.exerciseId }
@@ -108,9 +117,10 @@ fun PlanDetailScreen(
     )
 }
 @Composable
-private fun AddExerciseDialog(
+internal fun AddExerciseDialog(
     exercises: List<Exercise>,
     onDismiss: () -> Unit,
+    allowSelection: Boolean = true,
     onSave: (String, Int, Int, Double) -> Boolean
 ) {
     var selectedId by rememberSaveable { mutableStateOf(exercises.firstOrNull()?.id.orEmpty()) }
@@ -133,18 +143,22 @@ private fun AddExerciseDialog(
         title = { Text(stringResource(R.string.add_exercise)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box {
-                    OutlinedButton(onClick = { menuOpen = true }) {
-                        Text(selectedExercise?.name ?: stringResource(R.string.select_exercise))
-                    }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        for (exercise in exercises) {
-                            DropdownMenuItem(text = { Text(exercise.name) }, onClick = {
-                                selectedId = exercise.id
-                                menuOpen = false
-                            })
+                if (allowSelection) {
+                    Box {
+                        OutlinedButton(onClick = { menuOpen = true }) {
+                            Text(selectedExercise?.name ?: stringResource(R.string.select_exercise))
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            for (exercise in exercises) {
+                                DropdownMenuItem(text = { Text(exercise.name) }, onClick = {
+                                    selectedId = exercise.id
+                                    menuOpen = false
+                                })
+                            }
                         }
                     }
+                } else {
+                    selectedExercise?.let { Text(it.name, style = MaterialTheme.typography.titleMedium) }
                 }
                 OutlinedTextField(sets, { sets = it }, label = { Text(stringResource(R.string.sets)) },
                     singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), isError = attempted && setsInvalid,

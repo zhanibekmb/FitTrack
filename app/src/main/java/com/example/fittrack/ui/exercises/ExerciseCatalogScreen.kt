@@ -32,29 +32,31 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fittrack.R
 import com.example.fittrack.data.model.CatalogExercise
 import com.example.fittrack.data.model.CatalogMuscle
 
 @Composable
 fun ExerciseCatalogScreen(
-    viewModel: ExerciseViewModel,
+    state: ExerciseUiState,
+    onSearch: (String) -> Unit,
+    onSelectMuscle: (Int?) -> Unit,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
     onSelectExercise: (CatalogExercise) -> Unit
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
     val focus = LocalFocusManager.current
     Column(Modifier.fillMaxSize().imePadding()) {
         OutlinedTextField(
             value = state.query,
-            onValueChange = viewModel::search,
+            onValueChange = onSearch,
             label = { Text(stringResource(R.string.exercise_catalog_search)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
             trailingIcon = if (state.query.isNotEmpty()) {
                 {
-                    TextButton(onClick = { viewModel.search("") }) {
+                    TextButton(onClick = { onSearch("") }) {
                         Text(stringResource(R.string.clear_search))
                     }
                 }
@@ -62,7 +64,7 @@ fun ExerciseCatalogScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
         )
         if (state.muscles.isNotEmpty()) {
-            MuscleFilter(state.muscles, state.muscleId, viewModel::selectMuscle)
+            MuscleFilter(state.muscles, state.muscleId, onSelectMuscle)
         }
         when (val content = state.content) {
             ExerciseCatalogContent.Loading -> CatalogStatus(Modifier.weight(1f)) {
@@ -77,7 +79,7 @@ fun ExerciseCatalogScreen(
                 Text(stringResource(message), textAlign = TextAlign.Center)
             }
             is ExerciseCatalogContent.Error -> CatalogStatus(Modifier.weight(1f)) {
-                CatalogError(content.problem, viewModel::retry)
+                CatalogError(content.problem, onRetry)
             }
             is ExerciseCatalogContent.Success -> LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -95,9 +97,9 @@ fun ExerciseCatalogScreen(
                         CatalogStatus(Modifier) {
                             when {
                                 content.loadingMore -> CatalogLoading()
-                                content.pageError != null -> CatalogError(content.pageError, viewModel::retry)
+                                content.pageError != null -> CatalogError(content.pageError, onRetry)
                                 else -> OutlinedButton(
-                                    onClick = viewModel::loadMore,
+                                    onClick = onLoadMore,
                                     modifier = Modifier.fillMaxWidth()
                                 ) { Text(stringResource(R.string.exercise_catalog_more)) }
                             }

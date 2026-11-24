@@ -24,4 +24,5 @@
     <string name="exercise_catalog_image_alt">Exercise image for %1$s</string>
     <string name="exercise_catalog_image_credit">Image credits</string>
     <string name="exercise_catalog_original_image">Original image on wger</string>
+    <string name="exercise_catalog_saved_exercise">Add Saved Exercise</string>
 </resources>
