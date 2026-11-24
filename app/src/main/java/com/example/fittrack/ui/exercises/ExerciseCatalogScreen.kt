@@ -12,8 +12,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,10 +25,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fittrack.R
@@ -60,9 +64,22 @@ fun ExerciseCatalogScreen(
         if (state.muscles.isNotEmpty()) {
             MuscleFilter(state.muscles, state.muscleId, viewModel::selectMuscle)
         }
-        val content = state.content
-        if (content is ExerciseCatalogContent.Success) {
-            LazyColumn(
+        when (val content = state.content) {
+            ExerciseCatalogContent.Loading -> CatalogStatus(Modifier.weight(1f)) {
+                CatalogLoading()
+            }
+            ExerciseCatalogContent.Empty -> CatalogStatus(Modifier.weight(1f)) {
+                val message = when {
+                    state.query.isNotBlank() -> R.string.exercise_catalog_no_matches
+                    state.muscleId != null -> R.string.exercise_catalog_no_muscle_matches
+                    else -> R.string.exercise_catalog_empty
+                }
+                Text(stringResource(message), textAlign = TextAlign.Center)
+            }
+            is ExerciseCatalogContent.Error -> CatalogStatus(Modifier.weight(1f)) {
+                CatalogError(content.problem, viewModel::retry)
+            }
+            is ExerciseCatalogContent.Success -> LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -75,10 +92,16 @@ fun ExerciseCatalogScreen(
                 }
                 if (content.hasMore) {
                     item {
-                        OutlinedButton(
-                            onClick = viewModel::loadMore,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(stringResource(R.string.exercise_catalog_more)) }
+                        CatalogStatus(Modifier) {
+                            when {
+                                content.loadingMore -> CatalogLoading()
+                                content.pageError != null -> CatalogError(content.pageError, viewModel::retry)
+                                else -> OutlinedButton(
+                                    onClick = viewModel::loadMore,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(stringResource(R.string.exercise_catalog_more)) }
+                            }
+                        }
                     }
                 }
             }
@@ -108,4 +131,31 @@ private fun MuscleFilter(muscles: List<CatalogMuscle>, selectedId: Int?, onSelec
             }
         }
     }
+}
+
+@Composable
+private fun CatalogStatus(modifier: Modifier, content: @Composable () -> Unit) {
+    Column(
+        modifier.fillMaxWidth().padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) { content() }
+}
+
+@Composable
+private fun CatalogLoading() {
+    CircularProgressIndicator()
+    Text(stringResource(R.string.exercise_catalog_loading))
+}
+
+@Composable
+private fun CatalogError(problem: ExerciseLoadProblem, onRetry: () -> Unit) {
+    val message = when (problem) {
+        ExerciseLoadProblem.NETWORK -> R.string.exercise_catalog_network_error
+        ExerciseLoadProblem.TIMEOUT -> R.string.exercise_catalog_timeout
+        ExerciseLoadProblem.SERVICE -> R.string.exercise_catalog_service_error
+        ExerciseLoadProblem.INVALID_RESPONSE -> R.string.exercise_catalog_invalid_response
+    }
+    Text(stringResource(message), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+    OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.exercise_catalog_retry)) }
 }

@@ -12,4 +12,13 @@
     <string name="exercise_catalog_credit_by">By %1$s</string>
     <string name="exercise_catalog_wger_source">Exercise on wger</string>
     <string name="exercise_catalog_close">Close</string>
+    <string name="exercise_catalog_loading">Loading exercises…</string>
+    <string name="exercise_catalog_empty">No exercises are available in the online catalog.</string>
+    <string name="exercise_catalog_no_matches">No exercises match your search.</string>
+    <string name="exercise_catalog_no_muscle_matches">No exercises match this muscle group.</string>
+    <string name="exercise_catalog_network_error">Could not connect to wger. Check your internet connection.</string>
+    <string name="exercise_catalog_timeout">The exercise catalog took too long to respond.</string>
+    <string name="exercise_catalog_service_error">wger could not load exercises right now.</string>
+    <string name="exercise_catalog_invalid_response">wger returned exercise data that could not be read.</string>
+    <string name="exercise_catalog_retry">Retry</string>
 </resources>
