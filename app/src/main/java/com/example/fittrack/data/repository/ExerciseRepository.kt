@@ -4,26 +4,34 @@ import com.example.fittrack.data.model.CatalogCredit
 import com.example.fittrack.data.model.CatalogExercise
 import com.example.fittrack.data.model.CatalogImage
 import com.example.fittrack.data.model.CatalogLicense
+import com.example.fittrack.data.model.CatalogMuscle
 import com.example.fittrack.data.remote.ExerciseApiService
 import com.example.fittrack.data.remote.dto.ExerciseDto
 import com.example.fittrack.data.remote.dto.LicenseDto
+import com.example.fittrack.data.remote.dto.MuscleDto
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.HttpException
+import retrofit2.Response
 
 data class ExerciseCatalogPage(val exercises: List<CatalogExercise>, val nextOffset: Int?)
 
 class InvalidExerciseResponse : Exception("Invalid wger exercise response")
 
 class ExerciseRepository(private val api: ExerciseApiService) {
-    suspend fun loadPage(query: String, offset: Int = 0): ExerciseCatalogPage {
+    suspend fun loadMuscles(): List<CatalogMuscle> {
+        val rows = api.getMuscles().requireBody().results ?: throw InvalidExerciseResponse()
+        return rows.filterNotNull().mapNotNull { row ->
+            val id = row.id?.takeIf { it > 0 } ?: return@mapNotNull null
+            val name = row.displayName() ?: return@mapNotNull null
+            CatalogMuscle(id, name)
+        }.distinctBy { it.id }.sortedBy { it.name }
+    }
+
+    suspend fun loadPage(query: String, offset: Int = 0, muscleId: Int? = null): ExerciseCatalogPage {
         var pageOffset = offset
         do {
-            val response = api.getExercises(PAGE_SIZE, pageOffset, query.trim().ifEmpty { null })
-            if (!response.isSuccessful) {
-                response.errorBody()?.close()
-                throw HttpException(response)
-            }
-            val page = response.body() ?: throw InvalidExerciseResponse()
+            val page = api.getExercises(PAGE_SIZE, pageOffset, query.trim().ifEmpty { null }, muscleId)
+                .requireBody()
             val count = page.count?.takeIf { it >= 0 } ?: throw InvalidExerciseResponse()
             val results = page.results ?: throw InvalidExerciseResponse()
             val nextOffset = page.next?.let { url ->
@@ -68,7 +76,7 @@ class ExerciseRepository(private val api: ExerciseApiService) {
             wgerId = id,
             name = name,
             muscles = muscles.orEmpty().filterNotNull()
-                .mapNotNull { it.englishName.clean() ?: it.name.clean() }.distinct(),
+                .mapNotNull { it.displayName() }.distinct(),
             category = category?.name.clean(),
             equipment = equipment.orEmpty().mapNotNull { it?.name.clean() }.distinct(),
             credit = CatalogCredit(
@@ -81,6 +89,16 @@ class ExerciseRepository(private val api: ExerciseApiService) {
             image = image
         )
     }
+
+    private fun <T> Response<T>.requireBody(): T {
+        if (!isSuccessful) {
+            errorBody()?.close()
+            throw HttpException(this)
+        }
+        return body() ?: throw InvalidExerciseResponse()
+    }
+
+    private fun MuscleDto.displayName(): String? = englishName.clean() ?: name.clean()
 
     private fun licenseFor(id: Int?, exerciseLicense: LicenseDto?): CatalogLicense? {
         if (id == null) return null

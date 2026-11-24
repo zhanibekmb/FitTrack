@@ -27,3 +27,5 @@ data class CatalogCredit(
 )
 
 data class CatalogLicense(val name: String, val url: String)
+
+data class CatalogMuscle(val id: Int, val name: String)

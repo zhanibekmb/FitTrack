@@ -18,6 +18,7 @@ data class NamedDto(
 )
 
 data class MuscleDto(
+    @SerializedName("id") val id: Int?,
     @SerializedName("name") val name: String?,
     @SerializedName("name_en") val englishName: String?
 )
