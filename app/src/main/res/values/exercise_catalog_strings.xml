@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exercise_catalog_title">Exercise Catalog</string>
+    <string name="exercise_catalog_search">Search wger exercises</string>
+    <string name="exercise_catalog_all_muscles">All muscles</string>
+    <string name="exercise_catalog_filter">Muscle group: %1$s</string>
+    <string name="exercise_catalog_unknown_muscles">Muscle group unavailable</string>
+    <string name="exercise_catalog_equipment">Equipment: %1$s</string>
+    <string name="exercise_catalog_select">Select</string>
+    <string name="exercise_catalog_more">Load more</string>
+    <string name="exercise_catalog_credits">Credits</string>
+    <string name="exercise_catalog_credit_by">By %1$s</string>
+    <string name="exercise_catalog_wger_source">Exercise on wger</string>
+    <string name="exercise_catalog_close">Close</string>
+</resources>
