@@ -7,6 +7,7 @@ import com.example.fittrack.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 class WorkoutViewModel(
     private val repository: WorkoutRepository,
@@ -22,6 +23,8 @@ class WorkoutViewModel(
 
     private val _uiState = MutableStateFlow(WorkoutUiState())
     val uiState = _uiState.asStateFlow()
+    private val _saving = MutableStateFlow(false)
+    val saving = _saving.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -62,6 +65,7 @@ class WorkoutViewModel(
     }
 
     fun setCompleted(exerciseId: String, number: Int, completed: Boolean) {
+        if (_saving.value) return
         val state = _uiState.value
         if (state.sessionId == null || repository.data.value.activeSession?.id != state.sessionId) return
         val row = state.exercises.find { it.id == exerciseId }?.sets?.find { it.number == number } ?: return
@@ -87,6 +91,7 @@ class WorkoutViewModel(
     }
 
     fun addSet(exerciseId: String) {
+        if (_saving.value) return
         val state = _uiState.value
         if (state.sessionId == null || repository.data.value.activeSession?.id != state.sessionId) return
         _uiState.value = state.copy(message = null, exercises = state.exercises.map { exercise ->
@@ -114,22 +119,42 @@ class WorkoutViewModel(
         return success
     }
 
-    fun finishWorkout(planId: String): Boolean {
+    suspend fun finishWorkout(planId: String): Boolean {
+        if (_saving.value) return false
         val active = repository.data.value.activeSession
         if (active == null || active.planId != planId || active.id != _uiState.value.sessionId) {
             _uiState.value = _uiState.value.copy(message = WorkoutMessage.SESSION_UNAVAILABLE)
             return false
         }
-        if (repository.finishWorkout() == null) {
+        if (active.completedSets.isEmpty()) {
             _uiState.value = _uiState.value.copy(message = WorkoutMessage.EMPTY_WORKOUT)
             return false
         }
-        timer.reset()
-        _uiState.value = WorkoutUiState()
-        return true
+        _saving.value = true
+        try {
+            if (repository.finishWorkout(active.id) == null) {
+                _uiState.value = _uiState.value.copy(message = WorkoutMessage.SESSION_UNAVAILABLE)
+                return false
+            }
+            timer.reset()
+            _uiState.value = WorkoutUiState()
+            return true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            _uiState.value = _uiState.value.copy(message = WorkoutMessage.SAVE_FAILED)
+            return false
+        } finally {
+            _saving.value = false
+        }
+    }
+
+    fun finishWorkout(planId: String, onFinished: () -> Unit) {
+        viewModelScope.launch { if (finishWorkout(planId)) onFinished() }
     }
 
     fun discardWorkout(planId: String): Boolean {
+        if (_saving.value) return false
         val active = repository.data.value.activeSession
         if (active == null || active.planId != planId || active.id != _uiState.value.sessionId) return false
         if (!repository.discardWorkout()) return false
@@ -139,6 +164,7 @@ class WorkoutViewModel(
     }
 
     private fun changeSet(exerciseId: String, number: Int, change: (WorkoutSetUiState) -> WorkoutSetUiState) {
+        if (_saving.value) return
         val state = _uiState.value
         if (state.sessionId == null || repository.data.value.activeSession?.id != state.sessionId) return
         _uiState.value = state.copy(message = null, exercises = state.exercises.map { exercise ->

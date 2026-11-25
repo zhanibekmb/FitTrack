@@ -117,4 +117,9 @@
     <string name="delete_plan">Delete plan</string>
     <string name="delete_plan_confirmation">Delete %1$s? Completed workouts will stay in history.</string>
     <string name="delete_active_plan_hint">Finish the active workout before deleting this plan.</string>
+    <string name="storage_save_failed">Could not save changes. Your input is kept. Please try again.</string>
+    <string name="storage_load_failed">Could not load saved workouts.</string>
+    <string name="retry_storage">Retry</string>
+    <string name="edit_exercise">Edit exercise</string>
+    <string name="remove_exercise">Remove exercise</string>
 </resources>

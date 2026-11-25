@@ -16,6 +16,7 @@ import com.example.fittrack.R
 fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onFinished: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val timerState by viewModel.restTimer.collectAsStateWithLifecycle()
+    val saving by viewModel.saving.collectAsStateWithLifecycle()
     var confirmFinish by rememberSaveable(uiState.sessionId) { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable(uiState.sessionId) { mutableStateOf(false) }
     LazyColumn(
@@ -62,9 +63,10 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onFinished: () ->
                         Text(stringResource(R.string.workout_empty_finish), color = MaterialTheme.colorScheme.error)
                     }
                     Button(onClick = {
-                        if (uiState.completedSets == 0) viewModel.finishWorkout(planId) else confirmFinish = true
-                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.finish_workout)) }
-                    TextButton(onClick = { confirmDiscard = true }) { Text(stringResource(R.string.discard_workout)) }
+                        if (uiState.completedSets == 0) viewModel.finishWorkout(planId, onFinished) else confirmFinish = true
+                    }, enabled = !saving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.finish_workout)) }
+                    if (saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    TextButton(onClick = { confirmDiscard = true }, enabled = !saving) { Text(stringResource(R.string.discard_workout)) }
                 }
             }
         } else if (uiState.sessionId == null) {
@@ -83,7 +85,7 @@ fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onFinished: () ->
         confirmButton = {
             TextButton(onClick = {
                 confirmFinish = false
-                if (viewModel.finishWorkout(planId)) onFinished()
+                viewModel.finishWorkout(planId, onFinished)
             }) { Text(stringResource(R.string.finish_workout)) }
         },
         dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text(stringResource(R.string.cancel)) } }

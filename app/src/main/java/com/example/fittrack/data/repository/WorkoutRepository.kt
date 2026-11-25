@@ -9,73 +9,141 @@ import com.example.fittrack.data.model.WorkoutSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 
 data class WorkoutData(
     val plans: List<WorkoutPlan> = DemoData.plans,
     val exercises: List<Exercise> = DemoData.exercises,
     val sessions: List<WorkoutSession> = emptyList(),
-    val activeSession: WorkoutSession? = null
+    val activeSession: WorkoutSession? = null,
+    val isLoading: Boolean = false,
+    val storageError: Boolean = false,
+    val isSavingWorkout: Boolean = false
 )
 
-// Screen actions call these methods on the main thread.
-class WorkoutRepository {
-    private val _data = MutableStateFlow(WorkoutData())
+// Active workout input stays in memory. A successful persistent action has already committed to Room.
+class WorkoutRepository(private val storage: WorkoutStorage? = null) {
+    private val writes = Mutex()
+    private var changingPlan = false
+    private val _data = MutableStateFlow(WorkoutData(
+        plans = if (storage == null) DemoData.plans else emptyList(),
+        isLoading = storage != null
+    ))
     val data: StateFlow<WorkoutData> = _data.asStateFlow()
 
-    fun createPlan(name: String, dayOfWeek: Int): WorkoutPlan {
+    suspend fun observeStorage() {
+        val local = storage ?: return
+        _data.value = _data.value.copy(isLoading = true, storageError = false)
+        try {
+            writes.withLock { local.initialize(DemoData.plans) }
+            local.changes.collect {
+                // Re-read under the write lock so an older Flow emission cannot undo a completed action.
+                writes.withLock { refreshStoredData() }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            _data.value = _data.value.copy(isLoading = false, storageError = true)
+        }
+    }
+
+    private suspend fun refreshStoredData() {
+        val saved = storage?.read() ?: return
+        _data.value = _data.value.copy(plans = saved.plans, sessions = saved.sessions,
+            isLoading = false, storageError = false)
+    }
+
+    private suspend fun <T> changePlan(action: suspend () -> T): T = writes.withLock {
+        changingPlan = true
+        try {
+            withContext(NonCancellable) { action() }
+        } finally {
+            changingPlan = false
+        }
+    }
+
+    suspend fun createPlan(name: String, dayOfWeek: Int): WorkoutPlan = changePlan {
+        check(!_data.value.isLoading && !_data.value.storageError) { "Database is unavailable" }
         require(name.isNotBlank()) { "Plan name cannot be empty" }
         require(dayOfWeek in 1..7) { "Day must be between 1 and 7" }
 
         val plan = WorkoutPlan(UUID.randomUUID().toString(), name.trim(), dayOfWeek)
+        storage?.savePlan(plan)
         val current = _data.value
         _data.value = current.copy(plans = current.plans + plan)
-        return plan
+        plan
     }
 
-    fun editPlan(planId: String, name: String, dayOfWeek: Int): Boolean {
-        if (name.isBlank() || dayOfWeek !in 1..7) return false
-        val plan = _data.value.plans.find { it.id == planId } ?: return false
+    suspend fun editPlan(planId: String, name: String, dayOfWeek: Int): Boolean = changePlan {
+        if (!canEdit(planId) || name.isBlank() || dayOfWeek !in 1..7) return@changePlan false
+        val plan = _data.value.plans.find { it.id == planId } ?: return@changePlan false
         replacePlan(plan.copy(name = name.trim(), dayOfWeek = dayOfWeek))
-        return true
+        true
     }
 
-    fun deletePlan(planId: String): Boolean {
+    suspend fun deletePlan(planId: String): Boolean = changePlan {
+        if (!canEdit(planId) || _data.value.plans.none { it.id == planId }) return@changePlan false
+        storage?.deletePlan(planId)
         val current = _data.value
-        if (current.activeSession?.planId == planId) return false
-        if (current.plans.none { it.id == planId }) return false
-
         _data.value = current.copy(plans = current.plans.filter { it.id != planId })
-        return true
+        true
     }
 
-    fun addExerciseToPlan(
+    suspend fun addExerciseToPlan(
         planId: String,
         exerciseId: String,
         targetSets: Int,
         targetReps: Int,
         targetWeightKg: Double
-    ): Boolean {
-        if (targetSets <= 0 || targetReps <= 0) return false
-        if (!targetWeightKg.isFinite() || targetWeightKg < 0) return false
-        if (_data.value.exercises.none { it.id == exerciseId }) return false
-
-        val plan = _data.value.plans.find { it.id == planId } ?: return false
+    ): Boolean = changePlan {
+        if (!canEdit(planId) || !validTargets(exerciseId, targetSets, targetReps, targetWeightKg)) return@changePlan false
+        val plan = _data.value.plans.find { it.id == planId } ?: return@changePlan false
         val exercise = PlannedExercise(exerciseId, targetSets, targetReps, targetWeightKg)
         replacePlan(plan.copy(exercises = plan.exercises + exercise))
-        return true
+        true
     }
 
-    private fun replacePlan(updatedPlan: WorkoutPlan) {
+    suspend fun editPlannedExercise(planId: String, index: Int, exercise: PlannedExercise): Boolean = changePlan {
+        if (!canEdit(planId) || !validTargets(exercise.exerciseId, exercise.targetSets,
+                exercise.targetReps, exercise.targetWeightKg)) return@changePlan false
+        val plan = _data.value.plans.find { it.id == planId } ?: return@changePlan false
+        if (index !in plan.exercises.indices) return@changePlan false
+        replacePlan(plan.copy(exercises = plan.exercises.toMutableList().apply { set(index, exercise) }))
+        true
+    }
+
+    suspend fun removePlannedExercise(planId: String, index: Int): Boolean = changePlan {
+        if (!canEdit(planId)) return@changePlan false
+        val plan = _data.value.plans.find { it.id == planId } ?: return@changePlan false
+        if (index !in plan.exercises.indices) return@changePlan false
+        replacePlan(plan.copy(exercises = plan.exercises.filterIndexed { position, _ -> position != index }))
+        true
+    }
+
+    private fun canEdit(planId: String) = !_data.value.isLoading && !_data.value.storageError &&
+        _data.value.activeSession?.planId != planId
+
+    private fun validTargets(exerciseId: String, sets: Int, reps: Int, weight: Double) =
+        sets > 0 && reps > 0 && weight.isFinite() && weight >= 0 &&
+            _data.value.exercises.any { it.id == exerciseId }
+
+    private suspend fun replacePlan(updatedPlan: WorkoutPlan) {
+        val index = _data.value.plans.indexOfFirst { it.id == updatedPlan.id }
+        storage?.savePlan(updatedPlan)
         val current = _data.value
         val plans = current.plans.toMutableList()
-        val index = plans.indexOfFirst { it.id == updatedPlan.id }
         plans[index] = updatedPlan
         _data.value = current.copy(plans = plans.toList())
     }
 
     fun startWorkout(planId: String): WorkoutSession? {
         val current = _data.value
+        if (changingPlan || current.isLoading || current.storageError) return null
         if (current.activeSession != null) return null
         val plan = current.plans.find { it.id == planId } ?: return null
         if (plan.exercises.isEmpty()) return null
@@ -90,6 +158,7 @@ class WorkoutRepository {
     }
 
     fun completeSet(exerciseId: String, setNumber: Int, weightKg: Double, reps: Int): Boolean {
+        if (_data.value.isSavingWorkout) return false
         if (setNumber <= 0 || reps <= 0) return false
         if (!weightKg.isFinite() || weightKg < 0) return false
 
@@ -108,6 +177,7 @@ class WorkoutRepository {
     }
 
     fun removeCompletedSet(exerciseId: String, setNumber: Int): Boolean {
+        if (_data.value.isSavingWorkout) return false
         val current = _data.value
         val session = current.activeSession ?: return false
         val remaining = session.completedSets.filterNot {
@@ -119,26 +189,37 @@ class WorkoutRepository {
     }
 
     fun discardWorkout(): Boolean {
+        if (_data.value.isSavingWorkout) return false
         val current = _data.value
         if (current.activeSession == null) return false
         _data.value = current.copy(activeSession = null)
         return true
     }
 
-    fun finishWorkout(): WorkoutSession? {
+    suspend fun finishWorkout(expectedSessionId: String? = null): WorkoutSession? = writes.withLock {
         val current = _data.value
-        val session = current.activeSession ?: return null
-        if (session.completedSets.isEmpty()) return null
+        val session = current.activeSession ?: return@withLock null
+        if (expectedSessionId != null && session.id != expectedSessionId) return@withLock null
+        if (session.completedSets.isEmpty()) return@withLock null
 
         val finishedSession = session.copy(
             finishedAt = System.currentTimeMillis(),
             planName = current.plans.find { it.id == session.planId }?.name
         )
-        _data.value = current.copy(
-            sessions = current.sessions + finishedSession,
-            activeSession = null
-        )
-        return finishedSession
+        _data.value = current.copy(isSavingWorkout = true)
+        try {
+            // Once saving starts, navigation/cancellation must not interrupt the commit-to-UI handoff.
+            withContext(NonCancellable) {
+                storage?.saveSession(finishedSession)
+                _data.value = _data.value.copy(
+                    sessions = _data.value.sessions + finishedSession,
+                    activeSession = null
+                )
+            }
+            finishedSession
+        } finally {
+            _data.value = _data.value.copy(isSavingWorkout = false)
+        }
     }
 
     fun getPreviousSets(exerciseId: String): List<CompletedSet> {

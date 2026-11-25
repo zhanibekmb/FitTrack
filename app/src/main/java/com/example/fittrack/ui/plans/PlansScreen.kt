@@ -72,12 +72,14 @@ fun PlanFormScreen(
     onSaved: (String) -> Unit,
     plan: WorkoutPlan? = null
 ) {
+    val action by viewModel.action.collectAsStateWithLifecycle()
     var name by rememberSaveable { mutableStateOf(plan?.name.orEmpty()) }
     var submitted by rememberSaveable { mutableStateOf(false) }
     var day by rememberSaveable { mutableIntStateOf(plan?.dayOfWeek ?: 1) }
     var dayMenuOpen by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (action.failed) Text(stringResource(R.string.storage_save_failed), color = MaterialTheme.colorScheme.error)
         OutlinedTextField(value = name, onValueChange = {
                 name = it
                 submitted = false
@@ -104,13 +106,12 @@ fun PlanFormScreen(
             val cleanName = name.trim()
             if (cleanName.isNotEmpty()) {
                 if (plan == null) {
-                    val newPlan = viewModel.createPlan(cleanName, day)
-                    onSaved(newPlan.id)
-                } else if (viewModel.editPlan(plan.id, cleanName, day)) {
-                    onSaved(plan.id)
+                    viewModel.createPlan(cleanName, day, onSaved)
+                } else {
+                    viewModel.editPlan(plan.id, cleanName, day) { onSaved(plan.id) }
                 }
             }
-        }, modifier = Modifier.fillMaxWidth()) {
+        }, enabled = !action.saving, modifier = Modifier.fillMaxWidth()) {
             val label = if (plan == null) R.string.create_plan else R.string.save
             Text(stringResource(label))
         }
