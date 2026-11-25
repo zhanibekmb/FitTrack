@@ -1,5 +1,39 @@
 # Sabyrzhan — Workout Session & Rest Timer
 
+## Workout Planning & Session Persistence
+
+The updated assignment is implemented on `codex/workout-room-persistence`, based
+on the current GitHub main. The older branch table below describes the previous
+workout-session assignment.
+
+| Updated task | Implementation |
+| --- | --- |
+| 1. WorkoutPlanEntity | `data/local/WorkoutPlanEntity.kt` |
+| 2. PlannedExerciseEntity | `data/local/PlannedExerciseEntity.kt`, ordered composite key and cascading plan FK |
+| 3. WorkoutPlanDao | `data/local/WorkoutPlanDao.kt`, Flow reads and suspend writes |
+| 4. Create plan | `WorkoutRepository.createPlan`, `PlansViewModel`, form save callback after commit |
+| 5. Read saved plans | `WorkoutPlanRepository.read`, DAO Flows, shared `WorkoutData` |
+| 6. Update plan | Name/day plus add/edit/remove exercise targets; transactional child replacement |
+| 7. Delete plan | Confirmation, active-plan guard, cascade planned exercises, preserve history |
+| 8. Connect ViewModels | Existing shared repository now injects Room through `FitTrackContainer` |
+| 9. Save Finish Workout | Session/set entities and one history transaction; failures retain the active session |
+| 10. Survive restart | Disk-reopen instrumented tests and `scripts/check-workout-restart.ps1` |
+
+Plans and completed results now persist in Room. Unfinished input and the rest
+timer remain in memory. Demo plans seed only once. ViewModels report save errors
+and prevent duplicate submissions; navigation happens after a successful commit.
+
+For defense, follow a save through `PlansScreen` → `PlansViewModel` →
+`WorkoutRepository` → `WorkoutPlanRepository` → `WorkoutPlanDao` → SQLite. Room
+generates the DAO implementation through KSP. Suspend writes avoid blocking the
+UI; Flow refreshes the shared state and Compose observes it with lifecycle-aware
+collection. Explain why `@Transaction` groups a plan with its exercises, why a
+plan ID plus position allows repeated exercises, and why history has no cascading
+foreign key to the plan. DataStore remains the team's store for small settings;
+Room stores the related workout records.
+
+The sections below are the historical implementation notes for the earlier phase.
+
 The task branches form a stack: each branch includes the earlier tasks. The
 complete implementation is on `feature/workout-viewmodel-integration`.
 

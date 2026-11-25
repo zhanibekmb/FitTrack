@@ -10,7 +10,12 @@ FitTrack is a local gym workout journal. You choose a training plan, record the 
 4. If you go back, the active workout is still available under **Resume workout** on Home. Finish the workout after recording at least one set to add it to History.
 5. In History, open an exercise to see its best weight and its results in previous workouts.
 
-The app starts with three sample plans and nine catalog exercises. History starts empty. Plans and workout history live in memory for the current Android process. Rotating the device keeps the shared data. If Android ends the process, the next launch starts with the demo plans and empty history. The OS may keep an app process alive after you leave it.
+The first database creation inserts three sample plans; the existing catalog has
+nine exercises. History starts empty. Plans, their exercise targets, and finished
+workouts are saved in Room and survive a process restart. Deleting all plans keeps
+the list empty on the next launch. Unfinished workout drafts and the rest timer
+stay in memory; rotation preserves them, while process death clears them. DataStore
+saves the selected appearance independently.
 
 ## Project layout
 
@@ -25,7 +30,9 @@ The app starts with three sample plans and nine catalog exercises. History start
 | `data/model/WorkoutPlan.kt` | Holds a plan's ID, name, scheduled day, and planned exercises. |
 | `data/model/CompletedSet.kt` | Holds one recorded set and calculates its volume as weight times repetitions. |
 | `data/model/WorkoutSession.kt` | Holds the sets and timestamps for one workout and adds up its total volume. |
-| `data/repository/FitTrackContainer.kt` | Creates the single in-memory data holder shared by the app's ViewModels. |
+| `data/repository/FitTrackContainer.kt` | Caches the Room database, shared workout repository, and settings repository. |
+| `data/local/` | Defines plan/session/set tables, relations, transactional DAOs, and the version-1 database. |
+| `data/repository/WorkoutPlanRepository.kt` | Maps Room records to shared models and implements the `WorkoutStorage` persistence boundary. |
 | `data/repository/WorkoutRepository.kt` | Defines `WorkoutData` and changes plans, the active workout, and history. Its public StateFlow lets screens observe changes through their ViewModels. |
 | `ui/home/HomeViewModel.kt`, `DashboardState.kt`, and `HomeUiState.kt` | Convert shared data into the totals, today's plan list, and active workout details displayed on Home. |
 | `ui/home/HomeScreen.kt` | Shows dashboard cards and entry points to plans, history, and the active workout. |
@@ -43,7 +50,7 @@ The app starts with three sample plans and nine catalog exercises. History start
 
 1. The screen reads its input fields and calls a ViewModel function.
 2. The ViewModel passes the action to `WorkoutRepository`.
-3. The repository validates it and creates an updated copy of `WorkoutData`.
+3. The repository validates it. For plan changes and Finish, a suspend Room transaction commits the data before the shared state and success callback change.
 4. Publishing the copy through StateFlow tells Compose that the data changed. Screens collect the flow with `collectAsStateWithLifecycle`. Home turns that data into a smaller `HomeUiState`.
 5. Compose displays the new values. Temporary inputs like a search query or dialog fields belong to the screen and use `rememberSaveable`.
 

@@ -41,11 +41,20 @@ Home, planning, workout tracking, history, and exercise progress are connected i
 
 ## Lifetime and limits
 
-The repository is in memory and intended for sequential UI actions. Its flows do
-not provide atomic multi-thread transactions. Process death resets plans/history
-to demo data and clears the session. A restored workout route therefore offers
-explicit recovery. Room is configured for the future local repositories described in
-[TEAM_INTEGRATION.md](TEAM_INTEGRATION.md). The timer runs within the app process.
+`MainActivity` initializes `FitTrackContainer` before displaying navigation. The
+container caches one application-context Room database and one shared workout
+repository. Startup waits for the first database read and offers Retry on failure.
+`WorkoutPlanRepository` implements `WorkoutStorage`: suspend transactions write
+plans/results, and DAO Flows invalidate the shared state. Persistent writes are
+serialized; success is reported after the transaction commits. ViewModels launch
+coroutines and keep their input when saving fails. Plan mutations are blocked
+while that plan has an active session. Session/set insertion is one transaction;
+deleting a plan cascades only its planned exercises and keeps finished history.
+
+Plans/history survive process death. Only the active session, drafts, extra rows,
+and rest timer are in memory. A restored workout route offers explicit recovery.
+The no-storage `WorkoutRepository()` constructor supplies demo state for JVM tests;
+production always injects Room. See [TEAM_INTEGRATION.md](TEAM_INTEGRATION.md).
 
 The rest timer uses elapsed real time and a monotonic deadline. It remains active
 when navigating to another screen while the application process survives.

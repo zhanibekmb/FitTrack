@@ -5,36 +5,41 @@
 | Area | Owner | Files |
 | --- | --- | --- |
 | Shared infrastructure and settings | Zhanibek Mukatay | Gradle files, `FitTrackContainer.kt`, `MainActivity.kt`, navigation, `ui/settings/`, `SettingsRepository.kt`, and the future `FitTrackDatabase.kt` |
-| Workout plans | Zhangazin Akniyet | `ui/plans/` and the future plan entities, DAO, and local repository |
-| Workout session | Mamyrzhan Sabyrzhan | `ui/workout/` and the workout-to-history save handoff |
+| Workout planning and session persistence | Mamyrzhan Sabyrzhan | Plan entities/DAO/repository, `ui/plans/` persistence wiring, and `ui/workout/` Finish handoff |
 | History and progress | Bakhytzhan Azamat | `ui/history/` and the future session/set entities, history DAO, and history repository, coordinated with the workout owner |
-| Exercise catalog | Catalog assignee | Future exercise API repository, Retrofit service, response models, and Coil UI integration |
+| Exercise catalog | Zhangazin Akniyet | Exercise API repository, Retrofit service, response models, and Coil UI integration |
 
-The current README does not name a separate catalog owner. Confirm that assignment within the team.
+This allocation follows the updated assignment: Sabyrzhan owns plan CRUD and
+session persistence, Akniyet owns the REST exercise catalog.
 
 ## Room setup already in place
 
-The app applies KSP 2.3.10 and declares Room runtime and compiler 2.8.4 in the version catalog. KSP will export Room schemas to `app/schemas/` once there is a database to process. Preferences DataStore 1.2.1 is used by Settings today. The existing workout repository still supplies plans, exercises, and history in memory.
+The app applies KSP 2.3.10 and Room 2.8.4. The shared version-1 database and its
+exported schema are committed in `data/local/` and `app/schemas/`. Preferences
+DataStore 1.2.1 saves appearance settings. `FitTrackContainer.database(context)`
+caches the application-context database; `initialize(context)` connects it to the
+shared repository. Exercises still come from the existing catalog pending REST integration.
 
-## Add the database when the first real schema is ready
+## Database contract
 
-1. Put Room-specific Kotlin files in `app/src/main/java/com/example/fittrack/data/local/`. Keep the shared UI models in `data/model/`.
-2. Add each real entity to `@Database(entities = [...], version = 1, exportSchema = true)`. Create `FitTrackDatabase` in that package and extend `RoomDatabase`.
-3. Add one abstract getter per DAO. For example, add `abstract fun planDao(): WorkoutPlanDao` when that DAO exists. Do the same for history when its schema is ready.
-4. In `FitTrackContainer`, cache one database instance in a synchronized getter, using the same pattern as `settingsRepository(context)`. Build it with the application context.
-
-   ```kotlin
-   val database = Room.databaseBuilder(
-       context.applicationContext,
-       FitTrackDatabase::class.java,
-       "fittrack.db"
-   ).build()
-   ```
-
-5. Commit the generated version-1 schema. If another feature changes a schema that is already shipped, bump the version and provide and test a migration. Use suspend DAO writes and Flow reads. Leave main-thread database access and destructive fallback disabled.
+1. Keep Room entities and DAOs in `data/local/`, and UI models in `data/model/`.
+2. Use the existing `FitTrackDatabase`: `planDao()` and `historyDao()` share one file, `fittrack.db`.
+3. `WorkoutPlanEntity` has ordered `PlannedExerciseEntity` children. The composite key is plan ID plus position, so repeated exercises retain independent targets. Plan upsert and child replacement are transactional.
+4. The minimal `WorkoutSessionEntity`, `WorkoutSetEntity`, and `WorkoutHistoryDao` support the Finish handoff. Azamat can build his history repository and deletion UI on these shared tables. Keep the session name snapshot; do not cascade history when deleting a plan.
+5. `WorkoutStorage` is the persistence boundary. `WorkoutPlanRepository` currently loads both plans and finished results so existing Home/History/Progress screens and Previous use restored data. Coordinate changes to this adapter when adding Azamat's repository; do not create a second database or parallel session models.
+6. A `local_metadata` marker seeds demo plans once in a transaction. Never re-seed simply because the plan table is empty.
+7. If a released schema changes, bump the version and provide and test a migration. Keep schema export enabled, main-thread queries disabled, and destructive fallback disabled.
 
 ## Connect teammate repositories
 
-Create each local repository in `data/repository/`. Give it the relevant DAO from the shared database. Expose one cached instance from `FitTrackContainer`. For example, the future plan repository can be constructed with `WorkoutPlanRepository(database(context).planDao())`. When a ViewModel needs an application context, use the `SettingsViewModel` pattern and call the matching container function with its `Application`. Keep network service creation behind the catalog repository and expose it through the same container.
+Keep the public `WorkoutData` flow shared across screens. Persistent methods on
+`WorkoutRepository` are suspend functions; call them from ViewModel coroutines.
+Workout set input, start, and discard remain sequential main-thread UI actions.
+Catalog integration must preserve exercise IDs used by saved plans and results;
+cache exercise metadata if remote entries need to remain readable offline.
 
-Pending work includes the real plan and history schemas and queries, migration tests once a schema changes, the workout-to-history save handoff, and the Retrofit/Coil catalog. Add the local repositories as those features land and switch each UI to its new source in the same change that verifies it.
+Remaining team work includes the Retrofit/Coil catalog and Azamat's dedicated
+history repository, history deletion, and any additional progress features.
+Room tests cover disk reopen, plan CRUD, cascading exercise deletion, preserved
+history, one-time seeding, and rollback of an invalid Finish transaction. The
+restart script verifies persistence across separate app processes.
