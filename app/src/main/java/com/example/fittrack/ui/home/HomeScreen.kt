@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import java.util.Locale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.example.fittrack.R
 import com.example.fittrack.ui.components.StatCard
@@ -17,7 +18,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     onOpenPlans: () -> Unit,
     onOpenHistory: () -> Unit,
-    onResumeWorkout: (String) -> Unit = {}
+    onResumeWorkout: (String) -> Unit
 ) {
 
     Column(
@@ -33,7 +34,6 @@ fun HomeScreen(
             style = MaterialTheme.typography.titleMedium
         )
 
-        // STATISTICS
         Text(
             text = stringResource(R.string.statistics),
             style = MaterialTheme.typography.titleLarge
@@ -67,7 +67,6 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // ACTIVE WORKOUT
         if (uiState.activePlanId != null) {
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -90,7 +89,6 @@ fun HomeScreen(
             }
         }
 
-        // TODAY'S WORKOUT
         Text(
             text = stringResource(R.string.today_workout),
             style = MaterialTheme.typography.titleLarge
@@ -99,7 +97,7 @@ fun HomeScreen(
         if (uiState.todayPlans.isEmpty()) {
             Text(stringResource(R.string.rest_day))
         } else {
-            uiState.todayPlans.forEach { plan ->
+            for (plan in uiState.todayPlans) {
 
                 Card(
                     modifier = Modifier.fillMaxWidth()
@@ -117,7 +115,7 @@ fun HomeScreen(
                         )
 
                         Text(
-                            text = androidx.compose.ui.res.pluralStringResource(R.plurals.plans_exercise_count, plan.exercises.size, plan.exercises.size)
+                            text = pluralStringResource(R.plurals.plans_exercise_count, plan.exercises.size, plan.exercises.size)
                         )
 
                         Button(onClick = onOpenPlans) {
@@ -128,7 +126,6 @@ fun HomeScreen(
             }
         }
 
-        // NAVIGATION BUTTONS
         Button(
             onClick = onOpenPlans,
             modifier = Modifier.fillMaxWidth()

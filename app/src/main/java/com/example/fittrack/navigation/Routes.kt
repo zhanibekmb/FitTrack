@@ -11,7 +11,12 @@ object Routes {
 
     fun exerciseProgress(exerciseId: String) = "history/exercise/${Uri.encode(exerciseId)}"
     const val CREATE_PLAN = "plans/create"
+    const val EDIT_PLAN = "plans/edit/{planId}"
     const val PLAN_DETAIL = "plans/detail/{planId}"
+
+    fun editPlan(planId: String): String {
+        return "plans/edit/${Uri.encode(planId)}"
+    }
 
     fun planDetail(planId: String): String {
         require(planId.isNotBlank()) { "Plan ID cannot be blank" }

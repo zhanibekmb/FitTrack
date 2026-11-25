@@ -6,7 +6,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -14,11 +18,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fittrack.R
+import com.example.fittrack.data.model.WorkoutPlan
 import com.example.fittrack.ui.components.EmptyState
 
 @Composable
 fun PlansScreen(viewModel: PlansViewModel, onOpenPlan: (String) -> Unit, onCreatePlan: () -> Unit) {
-    val plans by viewModel.plans.collectAsStateWithLifecycle()
+    val data by viewModel.data.collectAsStateWithLifecycle()
+    val plans = data.plans
     var query by rememberSaveable { mutableStateOf("") }
     val visiblePlans = plans.filter { it.name.contains(query.trim(), ignoreCase = true) }
     LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(20.dp),
@@ -61,14 +67,21 @@ fun dayName(dayOfWeek: Int): String = stringResource(when (dayOfWeek) {
 })
 
 @Composable
-fun CreatePlanScreen(viewModel: PlansViewModel, onCreated: (String) -> Unit) {
-    var name by rememberSaveable { mutableStateOf("") }
+fun PlanFormScreen(
+    viewModel: PlansViewModel,
+    onSaved: (String) -> Unit,
+    plan: WorkoutPlan? = null
+) {
+    var name by rememberSaveable { mutableStateOf(plan?.name.orEmpty()) }
     var submitted by rememberSaveable { mutableStateOf(false) }
-    var day by rememberSaveable { mutableIntStateOf(1) }
+    var day by rememberSaveable { mutableIntStateOf(plan?.dayOfWeek ?: 1) }
     var dayMenuOpen by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        OutlinedTextField(value = name, onValueChange = { name = it; submitted = false },
+        OutlinedTextField(value = name, onValueChange = {
+                name = it
+                submitted = false
+            },
             label = { Text(stringResource(R.string.plan_name)) }, singleLine = true,
             isError = submitted && name.isBlank(),
             supportingText = if (submitted && name.isBlank()) {{ Text(stringResource(R.string.plan_name_required)) }} else null,
@@ -78,15 +91,28 @@ fun CreatePlanScreen(viewModel: PlansViewModel, onCreated: (String) -> Unit) {
                 Text(stringResource(R.string.training_day, dayName(day)))
             }
             DropdownMenu(expanded = dayMenuOpen, onDismissRequest = { dayMenuOpen = false }) {
-                (1..7).forEach { option ->
-                    DropdownMenuItem(text = { Text(dayName(option)) }, onClick = { day = option; dayMenuOpen = false })
+                for (option in 1..7) {
+                    DropdownMenuItem(text = { Text(dayName(option)) }, onClick = {
+                        day = option
+                        dayMenuOpen = false
+                    })
                 }
             }
         }
         Button(onClick = {
             submitted = true
             val cleanName = name.trim()
-            if (cleanName.isNotEmpty()) onCreated(viewModel.createPlan(cleanName, day).id)
-        }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.create_plan)) }
+            if (cleanName.isNotEmpty()) {
+                if (plan == null) {
+                    val newPlan = viewModel.createPlan(cleanName, day)
+                    onSaved(newPlan.id)
+                } else if (viewModel.editPlan(plan.id, cleanName, day)) {
+                    onSaved(plan.id)
+                }
+            }
+        }, modifier = Modifier.fillMaxWidth()) {
+            val label = if (plan == null) R.string.create_plan else R.string.save
+            Text(stringResource(label))
+        }
     }
 }

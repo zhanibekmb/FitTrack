@@ -16,7 +16,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.fittrack.R
-import com.example.fittrack.data.repository.FitTrackContainer
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
 import com.example.fittrack.ui.history.*
@@ -39,6 +41,7 @@ fun FitTrackNavGraph() {
     val title = stringResource(when (route) {
         Routes.PLANS -> R.string.workout_plans
         Routes.CREATE_PLAN -> R.string.create_plan
+        Routes.EDIT_PLAN -> R.string.edit_plan
         Routes.PLAN_DETAIL -> R.string.workout
         Routes.HISTORY -> R.string.workout_history
         Routes.EXERCISE_PROGRESS -> R.string.exercise_progress
@@ -47,13 +50,11 @@ fun FitTrackNavGraph() {
     })
 
     fun openWorkout(planId: String) {
-        val active = repository.activeSession.value
-        val message = when {
-            repository.plans.value.none { it.id == planId } -> invalidMessage
-            active != null && active.planId != planId -> conflictMessage
-            active == null && repository.plans.value.find { it.id == planId }?.exercises.isNullOrEmpty() -> emptyMessage
-            active == null && repository.startWorkout(planId) == null -> invalidMessage
-            else -> null
+        val message = when (workoutViewModel.startOrResume(planId)) {
+            WorkoutStartResult.INVALID_PLAN -> invalidMessage
+            WorkoutStartResult.OTHER_WORKOUT_ACTIVE -> conflictMessage
+            WorkoutStartResult.EMPTY_PLAN -> emptyMessage
+            WorkoutStartResult.READY -> null
         }
         if (message != null) {
             scope.launch { snackbar.showSnackbar(message) }
@@ -62,9 +63,9 @@ fun FitTrackNavGraph() {
         }
     }
 
-    // Apply system-bar insets once for all current screens.
+    val goBack: () -> Unit = { navController.popBackStack() }
     Scaffold(
-        topBar = { FitTrackAppBar(title, if (route == Routes.HOME) null else ({ navController.popBackStack(); Unit })) },
+        topBar = { FitTrackAppBar(title, if (route == Routes.HOME) null else goBack) },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
         NavHost(
@@ -73,12 +74,20 @@ fun FitTrackNavGraph() {
             modifier = Modifier.padding(padding).consumeWindowInsets(padding)
         ) {
             composable(Routes.HOME) {
-                val homeViewModel: HomeViewModel = viewModel(
-                    factory = HomeViewModelFactory(repository)
-                )
-                val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                val homeViewModel: HomeViewModel = viewModel()
+                val data by homeViewModel.data.collectAsStateWithLifecycle()
+                val lifecycle = LocalLifecycleOwner.current.lifecycle
+                var today by remember { mutableIntStateOf(homeViewModel.currentTrainingDay()) }
+                LaunchedEffect(lifecycle) {
+                    lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        while (true) {
+                            today = homeViewModel.currentTrainingDay()
+                            delay(30_000)
+                        }
+                    }
+                }
                 HomeScreen(
-                    uiState = uiState,
+                    uiState = homeViewModel.dashboard(data, today),
                     onOpenPlans = {
                         navController.navigate(Routes.PLANS) { launchSingleTop = true }
                     },
@@ -89,7 +98,7 @@ fun FitTrackNavGraph() {
                 )
             }
             composable(Routes.PLANS) {
-                val plansViewModel: PlansViewModel = viewModel(factory = PlansViewModelFactory(repository))
+                val plansViewModel: PlansViewModel = viewModel()
                 PlansScreen(
                     viewModel = plansViewModel,
                     onOpenPlan = { navController.navigate(Routes.planDetail(it)) { launchSingleTop = true } },
@@ -97,10 +106,10 @@ fun FitTrackNavGraph() {
                 )
             }
             composable(Routes.CREATE_PLAN) {
-                val plansViewModel: PlansViewModel = viewModel(factory = PlansViewModelFactory(repository))
-                CreatePlanScreen(
+                val plansViewModel: PlansViewModel = viewModel()
+                PlanFormScreen(
                     viewModel = plansViewModel,
-                    onCreated = { id ->
+                    onSaved = { id ->
                         navController.navigate(Routes.planDetail(id)) {
                             popUpTo(Routes.CREATE_PLAN) { inclusive = true }
                             launchSingleTop = true
@@ -112,23 +121,39 @@ fun FitTrackNavGraph() {
                 route = Routes.PLAN_DETAIL,
                 arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
             ) { entry ->
-                val plansViewModel: PlansViewModel = viewModel(factory = PlansViewModelFactory(repository))
+                val plansViewModel: PlansViewModel = viewModel()
                 val planId = entry.arguments?.getString(Routes.PLAN_ID).orEmpty()
                 PlanDetailScreen(
                     viewModel = plansViewModel,
                     planId = planId,
-                    onStartWorkout = { openWorkout(planId) }
+                    onStartWorkout = { openWorkout(planId) },
+                    onEditPlan = { navController.navigate(Routes.editPlan(planId)) },
+                    onDeleted = goBack
                 )
             }
+            composable(
+                route = Routes.EDIT_PLAN,
+                arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
+            ) { entry ->
+                val plansViewModel: PlansViewModel = viewModel()
+                val planId = entry.arguments?.getString(Routes.PLAN_ID).orEmpty()
+                val data by plansViewModel.data.collectAsStateWithLifecycle()
+                val plan = data.plans.find { it.id == planId }
+                if (plan == null) {
+                    Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
+                } else {
+                    PlanFormScreen(plansViewModel, onSaved = { goBack() }, plan = plan)
+                }
+            }
             composable(Routes.HISTORY) {
-                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(repository))
+                val historyViewModel: HistoryViewModel = viewModel()
                 HistoryScreen(historyViewModel, openExercise = {
                     navController.navigate(Routes.exerciseProgress(it)) { launchSingleTop = true }
                 })
             }
             composable(Routes.EXERCISE_PROGRESS,
                 arguments = listOf(navArgument(Routes.EXERCISE_ID) { type = NavType.StringType })) { entry ->
-                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(repository))
+                val historyViewModel: HistoryViewModel = viewModel()
                 ExerciseProgressScreen(entry.arguments?.getString(Routes.EXERCISE_ID).orEmpty(), historyViewModel)
             }
             composable(

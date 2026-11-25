@@ -10,10 +10,10 @@ class WorkoutRepositoryTest {
     fun repositoryStartsWithDemoData() {
         val repository = WorkoutRepository()
 
-        assertEquals(3, repository.plans.value.size)
-        assertEquals(9, repository.exercises.value.size)
-        assertTrue(repository.sessions.value.isEmpty())
-        assertNull(repository.activeSession.value)
+        assertEquals(3, repository.data.value.plans.size)
+        assertEquals(9, repository.data.value.exercises.size)
+        assertTrue(repository.data.value.sessions.isEmpty())
+        assertNull(repository.data.value.activeSession)
     }
 
     @Test
@@ -38,7 +38,7 @@ class WorkoutRepositoryTest {
 
         assertTrue(added)
 
-        val savedPlan = repository.plans.value
+        val savedPlan = repository.data.value.plans
             .first { it.id == plan.id }
 
         assertEquals(1, savedPlan.exercises.size)
@@ -59,8 +59,8 @@ class WorkoutRepositoryTest {
 
         assertNotNull(session)
         assertEquals("push-day", session?.planId)
-        assertNotNull(repository.activeSession.value)
-        assertTrue(repository.sessions.value.isEmpty())
+        assertNotNull(repository.data.value.activeSession)
+        assertTrue(repository.data.value.sessions.isEmpty())
 
         // Cannot start another workout while active
         val second = repository.startWorkout("leg-day")
@@ -101,7 +101,7 @@ class WorkoutRepositoryTest {
 
         assertEquals(
             1,
-            repository.activeSession.value
+            repository.data.value.activeSession
                 ?.completedSets?.size
         )
     }
@@ -127,10 +127,10 @@ class WorkoutRepositoryTest {
         assertEquals(2, finished.completedSets.size)
 
         // Workout moved to history
-        assertEquals(1, repository.sessions.value.size)
+        assertEquals(1, repository.data.value.sessions.size)
 
         // No active workout
-        assertNull(repository.activeSession.value)
+        assertNull(repository.data.value.activeSession)
 
         // Volume: 15 * 12 = 180
         val firstSet = finished.completedSets.first()
@@ -162,6 +162,32 @@ class WorkoutRepositoryTest {
     }
 
     @Test
+    fun editAndDeletePlanKeepFinishedWorkoutHistory() {
+        val repository = WorkoutRepository()
+        val plan = repository.createPlan("Upper Body", 2)
+        assertNull(repository.startWorkout(plan.id))
+        assertFalse(repository.editPlan(plan.id, " ", 4))
+        assertFalse(repository.editPlan(plan.id, "Strength", 8))
+        assertTrue(repository.addExerciseToPlan(plan.id, "db-bench", 3, 10, 15.0))
+        assertTrue(repository.editPlan(plan.id, " Strength ", 4))
+
+        val editedPlan = repository.data.value.plans.first { it.id == plan.id }
+        assertEquals("Strength", editedPlan.name)
+        assertEquals(4, editedPlan.dayOfWeek)
+        assertEquals(1, editedPlan.exercises.size)
+
+        assertNotNull(repository.startWorkout(plan.id))
+        assertFalse(repository.deletePlan(plan.id))
+        assertTrue(repository.completeSet("db-bench", 1, 15.0, 10))
+        val finished = repository.finishWorkout()
+        assertNull(repository.data.value.activeSession)
+        assertTrue(repository.deletePlan(plan.id))
+        assertFalse(repository.data.value.plans.any { it.id == plan.id })
+        assertEquals(listOf(finished), repository.data.value.sessions)
+        assertEquals("Strength", finished?.planName)
+    }
+
+    @Test
     fun cannotFinishEmptyWorkout() {
         val repository = WorkoutRepository()
 
@@ -170,7 +196,7 @@ class WorkoutRepositoryTest {
         val result = repository.finishWorkout()
 
         assertNull(result)
-        assertNotNull(repository.activeSession.value)
-        assertTrue(repository.sessions.value.isEmpty())
+        assertNotNull(repository.data.value.activeSession)
+        assertTrue(repository.data.value.sessions.isEmpty())
     }
 }
