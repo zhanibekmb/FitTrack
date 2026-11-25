@@ -32,7 +32,7 @@ class WorkoutViewModelTest {
 
     @Test fun completeCorrectAndFinishStoresActualResultsWithoutChangingPlan() = runTest(dispatcher) {
         val repository = WorkoutRepository()
-        val original = repository.plans.value.first()
+        val original = repository.data.value.plans.first()
         repository.startWorkout(original.id)
         val vm = model(repository)
         runCurrent()
@@ -40,10 +40,10 @@ class WorkoutViewModelTest {
         vm.updateReps("db-bench", 1, "8")
         vm.setCompleted("db-bench", 1, true)
         vm.setCompleted("db-bench", 1, true)
-        assertEquals(1, repository.activeSession.value!!.completedSets.size)
+        assertEquals(1, repository.data.value.activeSession!!.completedSets.size)
         assertTrue(vm.restTimer.value.running)
         vm.setCompleted("db-bench", 1, false)
-        assertTrue(repository.activeSession.value!!.completedSets.isEmpty())
+        assertTrue(repository.data.value.activeSession!!.completedSets.isEmpty())
         vm.updateReps("db-bench", 1, "9")
         vm.setCompleted("db-bench", 1, true)
         vm.addSet("db-bench")
@@ -52,11 +52,11 @@ class WorkoutViewModelTest {
         vm.setCompleted("db-bench", 4, true)
         assertTrue(vm.finishWorkout(original.id))
         runCurrent()
-        val saved = repository.sessions.value.single()
+        val saved = repository.data.value.sessions.single()
         assertEquals(2, saved.completedSets.size)
         assertEquals(217.5, saved.completedSets.sumOf { it.volumeKg }, 0.001)
-        assertEquals(original, repository.plans.value.first())
-        assertNull(repository.activeSession.value)
+        assertEquals(original, repository.data.value.plans.first())
+        assertNull(repository.data.value.activeSession)
         assertNull(vm.uiState.value.sessionId)
         assertFalse(vm.restTimer.value.running)
     }
@@ -73,12 +73,12 @@ class WorkoutViewModelTest {
         assertTrue(vm.uiState.value.exercises.first().sets.first().showErrors)
         assertFalse(vm.finishWorkout("push-day"))
         assertEquals(WorkoutMessage.EMPTY_WORKOUT, vm.uiState.value.message)
-        assertTrue(repository.sessions.value.isEmpty())
-        assertTrue(repository.activeSession.value!!.completedSets.isEmpty())
+        assertTrue(repository.data.value.sessions.isEmpty())
+        assertTrue(repository.data.value.activeSession!!.completedSets.isEmpty())
         vm.updateWeight("db-bench", 1, "0")
         vm.updateReps("db-bench", 1, "1")
         vm.setCompleted("db-bench", 1, true)
-        assertEquals(0.0, repository.activeSession.value!!.completedSets.single().weightKg, 0.0)
+        assertEquals(0.0, repository.data.value.activeSession!!.completedSets.single().weightKg, 0.0)
     }
 
     @Test fun duplicatePlanEntriesCanBothBeRecorded() = runTest(dispatcher) {
@@ -91,7 +91,7 @@ class WorkoutViewModelTest {
         runCurrent()
         vm.setCompleted("db-bench", 1, true)
         vm.setCompleted("db-bench", 2, true)
-        assertEquals(listOf(10.0, 20.0), repository.activeSession.value!!.completedSets.map { it.weightKg })
+        assertEquals(listOf(10.0, 20.0), repository.data.value.activeSession!!.completedSets.map { it.weightKg })
     }
 
     @Test fun previousResultsMatchSetNumberIncludingAnAddedSet() = runTest(dispatcher) {
@@ -115,16 +115,16 @@ class WorkoutViewModelTest {
         val vm = model(repository)
         runCurrent()
         assertFalse(vm.finishWorkout("push-day"))
-        assertNull(repository.activeSession.value)
+        assertNull(repository.data.value.activeSession)
         assertTrue(vm.startWorkout("push-day"))
         runCurrent()
-        val sessionId = repository.activeSession.value!!.id
+        val sessionId = repository.data.value.activeSession!!.id
         assertTrue(vm.startWorkout("push-day"))
         assertFalse(vm.startWorkout("pull-day"))
         assertFalse(vm.finishWorkout("pull-day"))
         assertFalse(vm.discardWorkout("pull-day"))
-        assertEquals(sessionId, repository.activeSession.value!!.id)
-        assertTrue(repository.sessions.value.isEmpty())
+        assertEquals(sessionId, repository.data.value.activeSession!!.id)
+        assertTrue(repository.data.value.sessions.isEmpty())
     }
 
     @Test fun unrelatedPlanChangesPreserveDraftsAndExtraRows() = runTest(dispatcher) {
@@ -149,7 +149,7 @@ class WorkoutViewModelTest {
         vm.setCompleted("db-bench", 1, true)
         assertTrue(vm.discardWorkout("push-day"))
         runCurrent()
-        assertTrue(repository.sessions.value.isEmpty())
+        assertTrue(repository.data.value.sessions.isEmpty())
         assertFalse(vm.restTimer.value.running)
         assertTrue(vm.startWorkout("push-day"))
         runCurrent()
@@ -164,6 +164,6 @@ class WorkoutViewModelTest {
         runCurrent()
         assertFalse(vm.startWorkout(plan.id))
         assertEquals(WorkoutMessage.EMPTY_PLAN, vm.uiState.value.message)
-        assertNull(repository.activeSession.value)
+        assertNull(repository.data.value.activeSession)
     }
 }

@@ -4,6 +4,7 @@ import android.net.Uri
 
 object Routes {
     const val HOME = "home"
+    const val SETTINGS = "settings"
     const val PLANS = "plans"
     const val HISTORY = "history"
     const val EXERCISE_PROGRESS = "history/exercise/{exerciseId}"

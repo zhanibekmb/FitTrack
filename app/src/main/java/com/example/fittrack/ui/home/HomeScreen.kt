@@ -18,6 +18,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     onOpenPlans: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
     onResumeWorkout: (String) -> Unit
 ) {
 
@@ -138,6 +139,10 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.workout_history))
+        }
+
+        OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.settings))
         }
     }
 }

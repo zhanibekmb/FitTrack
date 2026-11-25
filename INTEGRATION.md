@@ -5,7 +5,8 @@ Home, planning, workout tracking, history, and exercise progress are connected i
 
 ## Shared state and navigation
 
-- Construct Home, Plans, and History ViewModels with their factories at destinations.
+- Create Home, Plans, and History ViewModels at their destinations using `viewModel()`.
+- `MainActivity` owns the `SettingsViewModel` and passes its state and theme callback to navigation. DataStore saves the theme across process restarts.
 - Construct the single `WorkoutViewModel` above `NavHost`, using the graph's
   inherited Activity owner. This deliberately keeps drafts, added rows, and the
   timer alive when Back pops the workout destination. Rotation keeps this owner.
@@ -43,7 +44,8 @@ Home, planning, workout tracking, history, and exercise progress are connected i
 The repository is in memory and intended for sequential UI actions. Its flows do
 not provide atomic multi-thread transactions. Process death resets plans/history
 to demo data and clears the session. A restored workout route therefore offers
-explicit recovery. No database or background timer notifications are included.
+explicit recovery. Room is configured for the future local repositories described in
+[TEAM_INTEGRATION.md](TEAM_INTEGRATION.md). The timer runs within the app process.
 
 The rest timer uses elapsed real time and a monotonic deadline. It remains active
 when navigating to another screen while the application process survives.

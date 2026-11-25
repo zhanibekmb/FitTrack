@@ -10,6 +10,7 @@ FitTrack is an Android gym workout journal.
 - Rest timer
 - Workout history
 - Progress statistics
+- Persistent light, dark, or system appearance
 
 ## Tech Stack
 - Kotlin
@@ -54,10 +55,11 @@ Finish Workout saves only checked sets, updates the dashboard, and makes the
 results available in Workout History and exercise progress. Discard Workout
 requires confirmation and saves nothing. Plans are never changed by set input.
 
-All data is held in memory. Rotation preserves the active workout, but process
+Workout data is held in memory. Theme preferences are saved with DataStore. Rotation preserves the active workout, but process
 death resets the repository to demo data. A restored workout screen offers an
 explicit start action rather than recording into a missing session. There are
 no background notifications or permanent database storage in this version.
 
 See [WORKOUT_MODULE.md](WORKOUT_MODULE.md) for task branches and manual checks,
 and [INTEGRATION.md](INTEGRATION.md) for shared module contracts.
+See [TEAM_INTEGRATION.md](TEAM_INTEGRATION.md) for the Room and settings handoff.

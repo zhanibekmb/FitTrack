@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.fittrack.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class WorkoutViewModel(
@@ -26,17 +25,16 @@ class WorkoutViewModel(
 
     init {
         viewModelScope.launch {
-            combine(repository.activeSession, repository.plans, repository.exercises, repository.sessions) { session, plans, library, _ ->
-                Triple(session, plans, library)
-            }.collect { (session, plans, library) ->
-                val plan = plans.find { it.id == session?.planId }
+            repository.data.collect { data ->
+                val session = data.activeSession
+                val plan = data.plans.find { it.id == session?.planId }
                 if (session == null || plan == null) {
                     timer.reset()
                     _uiState.value = WorkoutUiState()
                 } else {
                     val old = _uiState.value.takeIf { it.sessionId == session.id }
                     if (old == null) timer.reset()
-                    val exercises = workoutExercises(plan, library, session.completedSets).map { exercise ->
+                    val exercises = workoutExercises(plan, data.exercises, session.completedSets).map { exercise ->
                         val drafts = old?.exercises?.find { it.id == exercise.id }?.sets.orEmpty()
                         val rows = exercise.sets.map { row ->
                             if (row.completed) row else drafts.find { it.number == row.number }?.copy(completed = false) ?: row
@@ -65,7 +63,7 @@ class WorkoutViewModel(
 
     fun setCompleted(exerciseId: String, number: Int, completed: Boolean) {
         val state = _uiState.value
-        if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return
+        if (state.sessionId == null || repository.data.value.activeSession?.id != state.sessionId) return
         val row = state.exercises.find { it.id == exerciseId }?.sets?.find { it.number == number } ?: return
         if (row.completed == completed) return
         val weight = parsedWeight(row.weight)
@@ -90,7 +88,7 @@ class WorkoutViewModel(
 
     fun addSet(exerciseId: String) {
         val state = _uiState.value
-        if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return
+        if (state.sessionId == null || repository.data.value.activeSession?.id != state.sessionId) return
         _uiState.value = state.copy(message = null, exercises = state.exercises.map { exercise ->
             if (exercise.id != exerciseId) exercise else {
                 val last = exercise.sets.last()
@@ -104,20 +102,20 @@ class WorkoutViewModel(
     }
 
     fun startWorkout(planId: String): Boolean {
-        val plan = repository.plans.value.find { it.id == planId }
+        val plan = repository.data.value.plans.find { it.id == planId }
         if (plan == null || plan.exercises.isEmpty()) {
             _uiState.value = _uiState.value.copy(message = if (plan == null)
                 WorkoutMessage.SESSION_UNAVAILABLE else WorkoutMessage.EMPTY_PLAN)
             return false
         }
-        val active = repository.activeSession.value
+        val active = repository.data.value.activeSession
         val success = if (active == null) repository.startWorkout(planId) != null else active.planId == planId
         if (!success) _uiState.value = _uiState.value.copy(message = WorkoutMessage.SESSION_UNAVAILABLE)
         return success
     }
 
     fun finishWorkout(planId: String): Boolean {
-        val active = repository.activeSession.value
+        val active = repository.data.value.activeSession
         if (active == null || active.planId != planId || active.id != _uiState.value.sessionId) {
             _uiState.value = _uiState.value.copy(message = WorkoutMessage.SESSION_UNAVAILABLE)
             return false
@@ -132,7 +130,7 @@ class WorkoutViewModel(
     }
 
     fun discardWorkout(planId: String): Boolean {
-        val active = repository.activeSession.value
+        val active = repository.data.value.activeSession
         if (active == null || active.planId != planId || active.id != _uiState.value.sessionId) return false
         if (!repository.discardWorkout()) return false
         timer.reset()
@@ -142,7 +140,7 @@ class WorkoutViewModel(
 
     private fun changeSet(exerciseId: String, number: Int, change: (WorkoutSetUiState) -> WorkoutSetUiState) {
         val state = _uiState.value
-        if (state.sessionId == null || repository.activeSession.value?.id != state.sessionId) return
+        if (state.sessionId == null || repository.data.value.activeSession?.id != state.sessionId) return
         _uiState.value = state.copy(message = null, exercises = state.exercises.map { exercise ->
             if (exercise.id != exerciseId) exercise else exercise.copy(sets = exercise.sets.map { row ->
                 if (row.number == number) change(row) else row
