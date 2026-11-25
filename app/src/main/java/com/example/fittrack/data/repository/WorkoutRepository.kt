@@ -80,7 +80,10 @@ class WorkoutRepository {
         val plan = current.plans.find { it.id == planId } ?: return null
         if (plan.exercises.isEmpty()) return null
 
-        val session = WorkoutSession(
+        if (plan.exercises.isEmpty()) return null
+
+        // Create new workout session
+        val newSession = WorkoutSession(
             id = UUID.randomUUID().toString(),
             planId = plan.id,
             startedAt = System.currentTimeMillis()
@@ -104,6 +107,22 @@ class WorkoutRepository {
         val newSet = CompletedSet(exerciseId, setNumber, weightKg, reps)
         val updatedSession = session.copy(completedSets = session.completedSets + newSet)
         _data.value = current.copy(activeSession = updatedSession)
+        return true
+    }
+
+    fun removeCompletedSet(exerciseId: String, setNumber: Int): Boolean {
+        val session = _activeSession.value ?: return false
+        val remaining = session.completedSets.filterNot {
+            it.exerciseId == exerciseId && it.setNumber == setNumber
+        }
+        if (remaining.size == session.completedSets.size) return false
+        _activeSession.value = session.copy(completedSets = remaining)
+        return true
+    }
+
+    fun discardWorkout(): Boolean {
+        if (_activeSession.value == null) return false
+        _activeSession.value = null
         return true
     }
 

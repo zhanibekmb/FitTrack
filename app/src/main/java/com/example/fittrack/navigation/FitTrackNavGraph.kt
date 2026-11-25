@@ -22,17 +22,15 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
 import com.example.fittrack.ui.history.*
-import com.example.fittrack.ui.workout.WorkoutScreen
-import com.example.fittrack.ui.workout.WorkoutStartResult
-import com.example.fittrack.ui.workout.WorkoutViewModel
-import kotlinx.coroutines.delay
+import com.example.fittrack.ui.workout.*
 import com.example.fittrack.ui.components.FitTrackAppBar
 import kotlinx.coroutines.launch
 
 @Composable
 fun FitTrackNavGraph() {
     val navController = rememberNavController()
-    val workoutViewModel: WorkoutViewModel = viewModel()
+    val repository = FitTrackContainer.repository
+    val workoutViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(repository))
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val conflictMessage = stringResource(R.string.workout_conflict)
@@ -162,13 +160,17 @@ fun FitTrackNavGraph() {
                 route = Routes.WORKOUT,
                 arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
             ) { entry ->
-                val planId = entry.arguments?.getString(Routes.PLAN_ID).orEmpty()
-                WorkoutScreen(
-                    planId = planId,
-                    viewModel = workoutViewModel,
-                    onStart = { openWorkout(planId) },
-                    onFinished = goBack
-                )
+                val planId = entry.arguments?.getString(Routes.PLAN_ID)
+                val plans by repository.plans.collectAsStateWithLifecycle()
+                if (planId.isNullOrBlank() || plans.none { it.id == planId }) {
+                    Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
+                } else {
+                    WorkoutScreen(
+                        planId = planId,
+                        viewModel = workoutViewModel,
+                        onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) }
+                    )
+                }
             }
         }
     }

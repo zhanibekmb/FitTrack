@@ -1,153 +1,103 @@
 package com.example.fittrack.ui.workout
 
-import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fittrack.R
-import com.example.fittrack.data.model.CompletedSet
-import com.example.fittrack.data.model.PlannedExercise
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.delay
 
 @Composable
-fun WorkoutScreen(
-    planId: String,
-    viewModel: WorkoutViewModel,
-    onStart: () -> Unit,
-    onFinished: () -> Unit
-) {
-    val data by viewModel.data.collectAsStateWithLifecycle()
-    val plan = data.plans.find { it.id == planId }
-    if (plan == null) {
-        Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
-        return
-    }
-    val active = data.activeSession
-    val session = if (active?.planId == planId) active else null
-    var finishError by rememberSaveable(session?.id) { mutableStateOf(false) }
-    var restUntil by rememberSaveable(session?.id) { mutableLongStateOf(0L) }
-    var remaining by remember { mutableIntStateOf(0) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(restUntil, lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (true) {
-                val milliseconds = restUntil - SystemClock.elapsedRealtime()
-                remaining = if (milliseconds <= 0) 0 else ((milliseconds + 999) / 1000).toInt()
-                if (remaining == 0) break
-                delay(250)
+fun WorkoutScreen(planId: String, viewModel: WorkoutViewModel, onFinished: () -> Unit) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val timerState by viewModel.restTimer.collectAsStateWithLifecycle()
+    var confirmFinish by rememberSaveable(uiState.sessionId) { mutableStateOf(false) }
+    var confirmDiscard by rememberSaveable(uiState.sessionId) { mutableStateOf(false) }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().imePadding(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        uiState.message?.let { message ->
+            item {
+                Text(stringResource(when (message) {
+                    WorkoutMessage.INVALID_INPUT -> R.string.workout_invalid_input
+                    WorkoutMessage.SAVE_FAILED -> R.string.workout_save_failed
+                    WorkoutMessage.EMPTY_WORKOUT -> R.string.workout_empty_finish
+                    WorkoutMessage.EMPTY_PLAN -> R.string.workout_empty_plan
+                    WorkoutMessage.SESSION_UNAVAILABLE -> R.string.workout_recovery
+                }), color = MaterialTheme.colorScheme.error)
             }
         }
-    }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text(plan.name, style = MaterialTheme.typography.headlineMedium) }
-        if (session == null) {
+        if (uiState.planId == planId) {
             item {
-                Text(stringResource(R.string.workout_recovery))
-                Button(onClick = onStart) { Text(stringResource(R.string.start_workout)) }
-            }
-        } else {
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.rest_timer), style = MaterialTheme.typography.titleMedium)
-                        if (remaining > 0) {
-                            Text(stringResource(R.string.timer_value, remaining / 60, remaining % 60))
-                            TextButton(onClick = { restUntil = 0 }) { Text(stringResource(R.string.skip_rest)) }
-                        } else {
-                            OutlinedButton(onClick = { restUntil = SystemClock.elapsedRealtime() + 60_000 }) {
-                                Text(stringResource(R.string.start_rest))
-                            }
-                        }
-                    }
-                }
-            }
-            items(plan.exercises.distinctBy { it.exerciseId }, key = { it.exerciseId }) { planned ->
-                ExerciseRecorder(
-                    sessionId = session.id,
-                    planned = planned,
-                    name = data.exercises.find { it.id == planned.exerciseId }?.name ?: stringResource(R.string.exercise_unavailable),
-                    sets = session.completedSets.filter { it.exerciseId == planned.exerciseId },
-                    onRecord = { number, weight, reps ->
-                        val recorded = viewModel.recordSet(planId, planned.exerciseId, number, weight, reps)
-                        if (recorded) {
-                            restUntil = SystemClock.elapsedRealtime() + 60_000
-                            finishError = false
-                        }
-                        recorded
-                    }
+                Text(uiState.planName, style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.workout_set_count, uiState.completedSets, uiState.totalSets))
+                LinearProgressIndicator(
+                    progress = { if (uiState.totalSets == 0) 0f else uiState.completedSets.toFloat() / uiState.totalSets },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 )
             }
             item {
-                if (finishError) Text(stringResource(R.string.finish_failed), color = MaterialTheme.colorScheme.error)
-                Button(onClick = {
-                    if (viewModel.finishWorkout(planId)) onFinished() else finishError = true
-                }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.finish_workout)) }
+                RestTimerCard(timerState, viewModel::setRestDuration, viewModel::startRest,
+                    viewModel::pauseRest, viewModel::resetRest, viewModel::skipRest)
             }
-        }
-    }
-}
-
-@Composable
-private fun ExerciseRecorder(
-    sessionId: String, planned: PlannedExercise, name: String, sets: List<CompletedSet>,
-    onRecord: (Int, Double, Int) -> Boolean
-) {
-    var weight by rememberSaveable(sessionId, planned.exerciseId) { mutableStateOf(planned.targetWeightKg.toString()) }
-    var reps by rememberSaveable(sessionId, planned.exerciseId) { mutableStateOf(planned.targetReps.toString()) }
-    var attempted by rememberSaveable(sessionId, planned.exerciseId) { mutableStateOf(false) }
-    var failed by rememberSaveable(sessionId, planned.exerciseId) { mutableStateOf(false) }
-    val parsedWeight = weight.trim().replace(',', '.').toDoubleOrNull()
-    val parsedReps = reps.toIntOrNull()
-    val invalidWeight = parsedWeight == null || !parsedWeight.isFinite() || parsedWeight < 0
-    val invalidReps = parsedReps == null || parsedReps <= 0
-    val number = (sets.maxOfOrNull { it.setNumber } ?: 0) + 1
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(name, style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.exercise_target, planned.targetSets, planned.targetReps, planned.targetWeightKg),
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            for (set in sets) {
-                Text(stringResource(R.string.completed_set, set.setNumber, set.weightKg, set.reps))
+            items(uiState.exercises, key = { it.id }) { exercise ->
+                ExerciseCard(
+                    exercise = exercise,
+                    onWeightChange = { number, value -> viewModel.updateWeight(exercise.id, number, value) },
+                    onRepsChange = { number, value -> viewModel.updateReps(exercise.id, number, value) },
+                    onCompletedChange = { number, completed -> viewModel.setCompleted(exercise.id, number, completed) },
+                    onAddSet = { viewModel.addSet(exercise.id) }
+                )
             }
-            Text(stringResource(R.string.set_number, number), style = MaterialTheme.typography.labelLarge)
-            OutlinedTextField(weight, {
-                weight = it
-                failed = false
-            }, modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.weight_kg)) }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                isError = attempted && invalidWeight,
-                supportingText = if (attempted && invalidWeight) {{ Text(stringResource(R.string.valid_weight_required)) }} else null)
-            OutlinedTextField(reps, {
-                reps = it
-                failed = false
-            }, modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.repetitions)) }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = attempted && invalidReps,
-                supportingText = if (attempted && invalidReps) {{ Text(stringResource(R.string.positive_reps_required)) }} else null)
-            if (failed) Text(stringResource(R.string.set_record_failed), color = MaterialTheme.colorScheme.error)
-            FilledTonalButton(onClick = {
-                attempted = true
-                if (!invalidWeight && !invalidReps) {
-                    failed = !onRecord(number, parsedWeight, parsedReps)
-                    if (!failed) attempted = false
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (uiState.message == WorkoutMessage.EMPTY_WORKOUT) {
+                        Text(stringResource(R.string.workout_empty_finish), color = MaterialTheme.colorScheme.error)
+                    }
+                    Button(onClick = {
+                        if (uiState.completedSets == 0) viewModel.finishWorkout(planId) else confirmFinish = true
+                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.finish_workout)) }
+                    TextButton(onClick = { confirmDiscard = true }) { Text(stringResource(R.string.discard_workout)) }
                 }
-            }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.record_set)) }
+            }
+        } else if (uiState.sessionId == null) {
+            item {
+                Text(stringResource(R.string.workout_recovery))
+                Button(onClick = { viewModel.startWorkout(planId) }) { Text(stringResource(R.string.start_workout)) }
+            }
+        } else {
+            item { Text(stringResource(R.string.workout_conflict)) }
         }
     }
+    if (confirmFinish && uiState.planId == planId) AlertDialog(
+        onDismissRequest = { confirmFinish = false },
+        title = { Text(stringResource(R.string.finish_workout)) },
+        text = { Text(stringResource(R.string.finish_workout_question, uiState.completedSets, uiState.totalSets)) },
+        confirmButton = {
+            TextButton(onClick = {
+                confirmFinish = false
+                if (viewModel.finishWorkout(planId)) onFinished()
+            }) { Text(stringResource(R.string.finish_workout)) }
+        },
+        dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text(stringResource(R.string.cancel)) } }
+    )
+    if (confirmDiscard && uiState.planId == planId) AlertDialog(
+        onDismissRequest = { confirmDiscard = false },
+        title = { Text(stringResource(R.string.discard_workout)) },
+        text = { Text(stringResource(R.string.discard_workout_question)) },
+        confirmButton = {
+            TextButton(onClick = {
+                confirmDiscard = false
+                if (viewModel.discardWorkout(planId)) onFinished()
+            }) { Text(stringResource(R.string.discard_workout)) }
+        },
+        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(stringResource(R.string.cancel)) } }
+    )
 }
-
