@@ -1,4 +1,4 @@
-﻿package com.example.fittrack.ui.history
+package com.example.fittrack.ui.history
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,17 +13,14 @@ import com.example.fittrack.R
 import com.example.fittrack.ui.components.EmptyState
 
 @Composable
-fun ExerciseProgressScreen(exerciseId: String, vm: HistoryViewModel) {
-    val sessions by vm.sessions.collectAsStateWithLifecycle()
-    val exercises by vm.exercises.collectAsStateWithLifecycle()
-    val results = sessions.filter { it.isFinished }.sortedBy { it.finishedAt }.map { session ->
-        session to session.completedSets.filter { it.exerciseId == exerciseId }
-    }.filter { it.second.isNotEmpty() }
-    val weights = results.map { (_, sets) -> sets.maxOf { it.weightKg } }
+fun ExerciseProgressScreen(exerciseId: String, viewModel: HistoryViewModel) {
+    val data by viewModel.data.collectAsStateWithLifecycle()
+    val results = viewModel.exerciseResults(data.sessions, exerciseId)
+    val weights = results.map { it.bestWeight }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Text(exercises.find { it.id == exerciseId }?.name ?: stringResource(R.string.exercise_unavailable),
+            Text(data.exercises.find { it.id == exerciseId }?.name ?: stringResource(R.string.exercise_unavailable),
                 style = MaterialTheme.typography.titleLarge)
         }
         if (results.isEmpty()) item {
@@ -39,12 +36,12 @@ fun ExerciseProgressScreen(exerciseId: String, vm: HistoryViewModel) {
                 }
             }
             item { Text(stringResource(R.string.result_history), style = MaterialTheme.typography.titleLarge) }
-            items(results.asReversed(), key = { it.first.id }) { (session, sets) ->
+            items(results.asReversed(), key = { it.session.id }) { (session, sets) ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(formatWorkoutDate(session.finishedAt ?: session.startedAt),
                             style = MaterialTheme.typography.labelLarge)
-                        sets.forEach { set ->
+                        for (set in sets) {
                             Text(stringResource(R.string.completed_set, set.setNumber, set.weightKg, set.reps))
                         }
                     }

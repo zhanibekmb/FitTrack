@@ -13,9 +13,7 @@ internal fun dashboardState(
     return HomeUiState(
         totalPlans = plans.size,
         completedWorkouts = finished.size,
-        totalVolumeKg = finished.sumOf { session ->
-            session.completedSets.sumOf { it.volumeKg }
-        },
+        totalVolumeKg = finished.sumOf { it.totalVolumeKg() },
         todayPlans = plans.filter { it.dayOfWeek == today },
         activePlanName = plans.find { it.id == activeSession?.planId }?.name,
         activePlanId = activeSession?.planId

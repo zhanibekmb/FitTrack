@@ -10,6 +10,26 @@ class WorkoutFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
+    fun createEditAndDeleteAPlan() {
+        compose.onNodeWithText("Workout Plans").performScrollTo().performClick()
+        compose.onNodeWithText("Create plan", ignoreCase = true).performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("Defense Test Plan")
+        compose.onNode(hasClickAction() and hasText("Create plan", ignoreCase = true)).performScrollTo().performClick()
+
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Edit plan"))
+        compose.onNodeWithText("Edit plan").performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("Renamed Defense Plan")
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        compose.onNodeWithText("Renamed Defense Plan").assertExists()
+
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Delete plan"))
+        compose.onNodeWithText("Delete plan").performClick()
+        compose.onNode(hasClickAction() and hasText("Delete plan") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNodeWithText("Renamed Defense Plan").assertDoesNotExist()
+        compose.onNodeWithText("Push Day").assertExists()
+    }
+
+    @Test
     fun recordWorkoutAndSeeRealHistoryAndProgressInEnglish() {
         assertEquals("en", compose.activity.resources.configuration.locales[0].language)
         compose.onNodeWithText("Workout Plans").performScrollTo().performClick()

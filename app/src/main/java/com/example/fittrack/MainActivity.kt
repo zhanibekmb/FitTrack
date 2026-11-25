@@ -11,7 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import com.example.fittrack.navigation.FitTrackNavGraph
 import com.example.fittrack.ui.theme.FitTrackTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity()     {
     override fun attachBaseContext(newBase: Context) {
         // Keep app and Material component resources in English on every device language.
         val configuration = Configuration(newBase.resources.configuration)

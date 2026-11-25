@@ -1,13 +1,13 @@
-﻿# FitTrack integration
+# FitTrack integration
 
-All destinations use the shared `FitTrackContainer.repository`: Home, Plans, Create Plan, Plan Details, Workout, History, and Exercise Progress.
+All ViewModels share the in-memory `FitTrackContainer.repository`. Destinations collect its `WorkoutData` through their ViewModels.
 
 ## Contracts
 
-- Construct ViewModels with the shared repository and the destination ViewModel store owner. Do not create repositories inside screens.
-- Navigation owns workout start/resume and conflict messages. Back leaves the current session active; Finish Workout saves its completed sets and clears the session.
+- Create ViewModels with `viewModel()`. Workout actions share the app-level `WorkoutViewModel`.
+- `WorkoutViewModel` handles workout start and resume. Navigation displays conflict messages. Back leaves the current session active. Finish Workout publishes history and clears the active session together.
 - Empty plans cannot start through navigation. Empty sessions cannot finish. Validate finite nonnegative weights and positive whole-number repetitions and sets.
-- History observes repository sessions and displays only finished workouts. Charts use completed weights in chronological order, with one best-weight point per workout.
+- History displays finished workouts. Charts show one best-weight point per workout in chronological order. Plan deletion keeps history and is blocked for an active plan.
 - Repository data is held in memory. Activity recreation preserves it; process death resets plans and workout history to demo data.
 - Route arguments are decoded by Navigation. Use route builders to encode identifiers once.
 - Collect StateFlow with `collectAsStateWithLifecycle`. Do not mutate the repository during composition.

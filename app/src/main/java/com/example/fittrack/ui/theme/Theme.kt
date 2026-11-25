@@ -1,4 +1,4 @@
-﻿package com.example.fittrack.ui.theme
+package com.example.fittrack.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -62,5 +62,5 @@ fun FitTrackTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, shapes = FitTrackShapes, content = content)
+    MaterialTheme(colorScheme = colorScheme, shapes = FitTrackShapes, content = content)
 }

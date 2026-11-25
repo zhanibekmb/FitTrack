@@ -1,4 +1,4 @@
-﻿package com.example.fittrack.ui.workout
+package com.example.fittrack.ui.workout
 
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
@@ -16,29 +16,43 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fittrack.R
 import com.example.fittrack.data.model.CompletedSet
 import com.example.fittrack.data.model.PlannedExercise
-import com.example.fittrack.data.repository.WorkoutRepository
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 
 @Composable
-fun WorkoutScreen(planId: String, repository: WorkoutRepository, onStart: () -> Unit, onFinished: () -> Unit) {
-    val active by repository.activeSession.collectAsStateWithLifecycle()
-    val plans by repository.plans.collectAsStateWithLifecycle()
-    val exercises by repository.exercises.collectAsStateWithLifecycle()
-    val plan = plans.find { it.id == planId }
-    val session = active?.takeIf { it.planId == planId }
-    var finishError by rememberSaveable { mutableStateOf(false) }
+fun WorkoutScreen(
+    planId: String,
+    viewModel: WorkoutViewModel,
+    onStart: () -> Unit,
+    onFinished: () -> Unit
+) {
+    val data by viewModel.data.collectAsStateWithLifecycle()
+    val plan = data.plans.find { it.id == planId }
+    if (plan == null) {
+        Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
+        return
+    }
+    val active = data.activeSession
+    val session = if (active?.planId == planId) active else null
+    var finishError by rememberSaveable(session?.id) { mutableStateOf(false) }
     var restUntil by rememberSaveable(session?.id) { mutableLongStateOf(0L) }
     var remaining by remember { mutableIntStateOf(0) }
-    LaunchedEffect(restUntil) {
-        while (true) {
-            remaining = ((restUntil - SystemClock.elapsedRealtime() + 999L) / 1000L).coerceAtLeast(0L).toInt()
-            if (remaining == 0) break
-            delay(250)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(restUntil, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                val milliseconds = restUntil - SystemClock.elapsedRealtime()
+                remaining = if (milliseconds <= 0) 0 else ((milliseconds + 999) / 1000).toInt()
+                if (remaining == 0) break
+                delay(250)
+            }
         }
     }
     LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text(plan?.name ?: stringResource(R.string.workout), style = MaterialTheme.typography.headlineMedium) }
+        item { Text(plan.name, style = MaterialTheme.typography.headlineMedium) }
         if (session == null) {
             item {
                 Text(stringResource(R.string.workout_recovery))
@@ -60,23 +74,26 @@ fun WorkoutScreen(planId: String, repository: WorkoutRepository, onStart: () -> 
                     }
                 }
             }
-            items(plan?.exercises.orEmpty().distinctBy { it.exerciseId }, key = { it.exerciseId }) { planned ->
+            items(plan.exercises.distinctBy { it.exerciseId }, key = { it.exerciseId }) { planned ->
                 ExerciseRecorder(
                     sessionId = session.id,
                     planned = planned,
-                    name = exercises.find { it.id == planned.exerciseId }?.name ?: stringResource(R.string.exercise_unavailable),
+                    name = data.exercises.find { it.id == planned.exerciseId }?.name ?: stringResource(R.string.exercise_unavailable),
                     sets = session.completedSets.filter { it.exerciseId == planned.exerciseId },
                     onRecord = { number, weight, reps ->
-                        repository.completeSet(planned.exerciseId, number, weight, reps).also {
-                            if (it) restUntil = SystemClock.elapsedRealtime() + 60_000
+                        val recorded = viewModel.recordSet(planId, planned.exerciseId, number, weight, reps)
+                        if (recorded) {
+                            restUntil = SystemClock.elapsedRealtime() + 60_000
+                            finishError = false
                         }
+                        recorded
                     }
                 )
             }
             item {
                 if (finishError) Text(stringResource(R.string.finish_failed), color = MaterialTheme.colorScheme.error)
                 Button(onClick = {
-                    if (repository.finishWorkout() != null) onFinished() else finishError = true
+                    if (viewModel.finishWorkout(planId)) onFinished() else finishError = true
                 }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.finish_workout)) }
             }
         }
@@ -102,14 +119,22 @@ private fun ExerciseRecorder(
             Text(name, style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.exercise_target, planned.targetSets, planned.targetReps, planned.targetWeightKg),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            sets.forEach { Text(stringResource(R.string.completed_set, it.setNumber, it.weightKg, it.reps)) }
+            for (set in sets) {
+                Text(stringResource(R.string.completed_set, set.setNumber, set.weightKg, set.reps))
+            }
             Text(stringResource(R.string.set_number, number), style = MaterialTheme.typography.labelLarge)
-            OutlinedTextField(weight, { weight = it; failed = false }, modifier = Modifier.fillMaxWidth(),
+            OutlinedTextField(weight, {
+                weight = it
+                failed = false
+            }, modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.weight_kg)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 isError = attempted && invalidWeight,
                 supportingText = if (attempted && invalidWeight) {{ Text(stringResource(R.string.valid_weight_required)) }} else null)
-            OutlinedTextField(reps, { reps = it; failed = false }, modifier = Modifier.fillMaxWidth(),
+            OutlinedTextField(reps, {
+                reps = it
+                failed = false
+            }, modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.repetitions)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = attempted && invalidReps,

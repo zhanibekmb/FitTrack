@@ -27,10 +27,11 @@ fun ProgressChart(values: List<Double>) {
         Text(stringResource(R.string.no_chart_results))
         return
     }
-    val highest = (values.maxOrNull() ?: 0.0).coerceAtLeast(minimumValue = 1.0)
+    val highest = values.maxOrNull() ?: 0.0
+    val chartLimit = highest.coerceAtLeast(1.0) * 1.15
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            stringResource(R.string.chart_caption, values.maxOrNull() ?: 0.0),
+            stringResource(R.string.chart_caption, highest),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -41,28 +42,27 @@ fun ProgressChart(values: List<Double>) {
             val right = size.width - 16.dp.toPx()
             val top = 14.dp.toPx()
             val bottom = size.height - 14.dp.toPx()
-            val maxY = highest * 1.15
-            repeat(times = 4) { index ->
+            for (index in 0..3) {
                 val y = top + (bottom - top) * index / 3f
                 drawLine(color = grid, start = Offset(x = left, y), end = Offset(x = right, y))
             }
             val points = values.mapIndexed { index, weight ->
                 val x = if (values.size == 1) (left + right) / 2f
                 else left + (right - left) * index / values.lastIndex
-                val y = bottom - (bottom - top) * (weight / maxY).toFloat()
+                val y = bottom - (bottom - top) * (weight / chartLimit).toFloat()
                 Offset(x, y)
             }
-            for (i in 0 until points.lastIndex) {
+            for (index in 0 until points.lastIndex) {
                 drawLine(
                     color = accent,
-                    start = points[i],
-                    end = points[i + 1],
+                    start = points[index],
+                    end = points[index + 1],
                     strokeWidth = 3.dp.toPx(),
                     cap = StrokeCap.Round
                 )
             }
-            points.forEach { pt ->
-                drawCircle(color = accent, radius = 5.dp.toPx(), center = pt)
+            for (point in points) {
+                drawCircle(color = accent, radius = 5.dp.toPx(), center = point)
             }
         }
     }

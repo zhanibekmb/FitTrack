@@ -78,4 +78,8 @@
     <string name="timer_value">Rest remaining: %1$d:%2$02d</string>
     <string name="start_rest">Rest 60 seconds</string>
     <string name="skip_rest">Skip rest</string>
+    <string name="edit_plan">Edit plan</string>
+    <string name="delete_plan">Delete plan</string>
+    <string name="delete_plan_confirmation">Delete %1$s? Completed workouts will stay in history.</string>
+    <string name="delete_active_plan_hint">Finish the active workout before deleting this plan.</string>
 </resources>

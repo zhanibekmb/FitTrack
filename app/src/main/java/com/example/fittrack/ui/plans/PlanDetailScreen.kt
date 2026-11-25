@@ -6,7 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,11 +21,19 @@ import com.example.fittrack.R
 import com.example.fittrack.data.model.Exercise
 
 @Composable
-fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onStartWorkout: () -> Unit) {
-    val plans by viewModel.plans.collectAsStateWithLifecycle()
-    val exercises by viewModel.exercises.collectAsStateWithLifecycle()
-    val plan = plans.firstOrNull { it.id == planId }
+fun PlanDetailScreen(
+    viewModel: PlansViewModel,
+    planId: String,
+    onStartWorkout: () -> Unit,
+    onEditPlan: () -> Unit,
+    onDeleted: () -> Unit
+) {
+    val data by viewModel.data.collectAsStateWithLifecycle()
+    val exercises = data.exercises
+    val plan = data.plans.find { it.id == planId }
+    val hasActiveWorkout = data.activeSession?.planId == planId
     var showAdd by rememberSaveable { mutableStateOf(false) }
+    var showDelete by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (plan == null) item { Text(stringResource(R.string.invalid_plan)) }
         else {
@@ -44,7 +52,7 @@ fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onStartWorkout: 
                 }
                 if (exercises.isEmpty()) Text(stringResource(R.string.no_catalog_exercises))
             }
-            itemsIndexed(plan.exercises) { _, planned ->
+            items(plan.exercises) { planned ->
                 val exercise = exercises.firstOrNull { it.id == planned.exerciseId }
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -54,13 +62,48 @@ fun PlanDetailScreen(viewModel: PlansViewModel, planId: String, onStartWorkout: 
                     }
                 }
             }
+            item {
+                OutlinedButton(onClick = onEditPlan, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.edit_plan))
+                }
+                OutlinedButton(
+                    onClick = { showDelete = true },
+                    enabled = !hasActiveWorkout,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.delete_plan))
+                }
+                if (hasActiveWorkout) Text(stringResource(R.string.delete_active_plan_hint))
+            }
         }
+    }
+    if (showDelete && plan != null && !hasActiveWorkout) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text(stringResource(R.string.delete_plan)) },
+            text = { Text(stringResource(R.string.delete_plan_confirmation, plan.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDelete = false
+                    if (viewModel.deletePlan(planId)) onDeleted()
+                }) {
+                    Text(stringResource(R.string.delete_plan))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDelete = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
     if (showAdd && plan != null) AddExerciseDialog(
         exercises = exercises,
         onDismiss = { showAdd = false },
         onSave = { exerciseId, sets, reps, weight ->
-            viewModel.addExercise(planId, exerciseId, sets, reps, weight).also { if (it) showAdd = false }
+            val saved = viewModel.addExercise(planId, exerciseId, sets, reps, weight)
+            if (saved) showAdd = false
+            saved
         }
     )
 }
@@ -77,8 +120,8 @@ private fun AddExerciseDialog(
     var weight by rememberSaveable { mutableStateOf("") }
     var saveError by rememberSaveable { mutableStateOf(false) }
     var attempted by rememberSaveable { mutableStateOf(false) }
-    val effectiveId = selectedId.takeIf { id -> exercises.any { it.id == id } }
-        ?: exercises.firstOrNull()?.id
+    val selectedExercise = exercises.find { it.id == selectedId } ?: exercises.firstOrNull()
+    val effectiveId = selectedExercise?.id
     val parsedSets = sets.toIntOrNull()
     val parsedReps = reps.toIntOrNull()
     val parsedWeight = weight.trim().replace(',', '.').toDoubleOrNull()
@@ -92,10 +135,10 @@ private fun AddExerciseDialog(
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box {
                     OutlinedButton(onClick = { menuOpen = true }) {
-                        Text(exercises.firstOrNull { it.id == effectiveId }?.name ?: stringResource(R.string.select_exercise))
+                        Text(selectedExercise?.name ?: stringResource(R.string.select_exercise))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        exercises.forEach { exercise ->
+                        for (exercise in exercises) {
                             DropdownMenuItem(text = { Text(exercise.name) }, onClick = {
                                 selectedId = exercise.id
                                 menuOpen = false
