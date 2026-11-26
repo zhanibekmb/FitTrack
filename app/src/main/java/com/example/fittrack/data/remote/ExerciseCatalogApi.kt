@@ -2,7 +2,6 @@ package com.example.fittrack.data.remote
 
 import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -45,11 +44,7 @@ object RetrofitClientProvider {
     private const val BASE_URL = "https://wger.de/"
 
     val apiService: WgerApiService by lazy {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
-        }
         val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .build()

@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface WorkoutHistoryDao {
 
-    @Transaction
+    @Transaction //read
     @Query("SELECT * FROM workout_sessions WHERE isFinished = 1 ORDER BY finishedAt DESC, startedAt DESC")
     fun observeFinishedSessionsNewestFirst(): Flow<List<SessionWithSets>>
 
-    @Transaction
+    @Transaction//
     @Query("SELECT * FROM workout_sessions WHERE isFinished = 1 ORDER BY finishedAt ASC, startedAt ASC")
     fun observeFinishedSessionsOldestFirst(): Flow<List<SessionWithSets>>
 
@@ -28,19 +28,19 @@ interface WorkoutHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSets(sets: List<WorkoutSetEntity>)
 
-    @Transaction
+    @Transaction//create
     suspend fun insertSessionWithSets(session: WorkoutSessionEntity, sets: List<WorkoutSetEntity>) {
         insertSession(session)
         insertSets(sets)
     }
 
-    @Update
+    @Update//update
     suspend fun updateSession(session: WorkoutSessionEntity)
 
     @Query("UPDATE workout_sessions SET notes = :notes, planName = :planName WHERE id = :sessionId")
     suspend fun updateSessionDetails(sessionId: String, planName: String, notes: String)
 
-    @Query("DELETE FROM workout_sessions WHERE id = :sessionId")
+    @Query("DELETE FROM workout_sessions WHERE id = :sessionId")//delete
     suspend fun deleteSessionById(sessionId: String)
 
     @Query("DELETE FROM workout_sessions")
