@@ -3,10 +3,11 @@ package com.example.fittrack.ui.history
 import com.example.fittrack.data.repository.WorkoutRepository
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.coroutines.test.runTest
 
 class HistoryViewModelTest {
     @Test
-    fun historyReflectsCompletedRepositoryWorkoutsWithoutSampleResults() {
+    fun historyReflectsCompletedRepositoryWorkoutsWithoutSampleResults() = runTest {
         val repository = WorkoutRepository()
         val history = HistoryViewModel(repository)
         assertTrue(history.data.value.sessions.isEmpty())

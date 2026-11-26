@@ -13,10 +13,16 @@ import androidx.core.view.WindowCompat
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Before
+import com.example.fittrack.data.repository.FitTrackContainer
 
 class SettingsFlowTest {
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
+
+    @Before fun awaitStorage() {
+        compose.waitUntil(timeoutMillis = 10_000) { !FitTrackContainer.repository.data.value.isLoading }
+    }
 
     @Test
     fun themeSelectionUpdatesTheAppAndSurvivesActivityRecreation() {

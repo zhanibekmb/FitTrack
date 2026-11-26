@@ -2,12 +2,19 @@ package com.example.fittrack.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,6 +28,9 @@ import kotlinx.coroutines.delay
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.fittrack.ui.exercises.ExerciseCatalogContent
+import com.example.fittrack.ui.exercises.ExerciseCatalogScreen
+import com.example.fittrack.ui.exercises.ExerciseViewModel
 import com.example.fittrack.ui.home.*
 import com.example.fittrack.ui.plans.*
 import com.example.fittrack.ui.history.*
@@ -35,6 +45,7 @@ import kotlinx.coroutines.launch
 fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Unit) {
     val navController = rememberNavController()
     val repository = FitTrackContainer.repository
+    val storedData by repository.data.collectAsStateWithLifecycle()
     val workoutViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(repository))
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -49,6 +60,7 @@ fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Un
         Routes.CREATE_PLAN -> R.string.create_plan
         Routes.EDIT_PLAN -> R.string.edit_plan
         Routes.PLAN_DETAIL -> R.string.workout
+        Routes.EXERCISE_CATALOG -> R.string.exercise_catalog_title
         Routes.HISTORY -> R.string.workout_history
         Routes.EXERCISE_PROGRESS -> R.string.exercise_progress
         Routes.WORKOUT -> R.string.active_workout
@@ -78,6 +90,16 @@ fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Un
         topBar = { FitTrackAppBar(title, if (route == Routes.HOME) null else goBack) },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
+        if (storedData.isLoading || storedData.storageError) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                if (storedData.isLoading) CircularProgressIndicator()
+                else Column {
+                    Text(stringResource(R.string.storage_load_failed))
+                    Button(onClick = FitTrackContainer::retryStorage) { Text(stringResource(R.string.retry_storage)) }
+                }
+            }
+            return@Scaffold
+        }
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
@@ -143,9 +165,52 @@ fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Un
                     viewModel = plansViewModel,
                     planId = planId,
                     onStartWorkout = { openWorkout(planId) },
+                    onOpenExerciseCatalog = {
+                        navController.navigate(Routes.exerciseCatalog(planId)) { launchSingleTop = true }
+                    },
                     onEditPlan = { navController.navigate(Routes.editPlan(planId)) },
                     onDeleted = goBack
                 )
+            }
+            composable(
+                route = Routes.EXERCISE_CATALOG,
+                arguments = listOf(navArgument(Routes.PLAN_ID) { type = NavType.StringType })
+            ) { entry ->
+                val planId = entry.arguments?.getString(Routes.PLAN_ID).orEmpty()
+                val plansViewModel: PlansViewModel = viewModel()
+                val workoutData by plansViewModel.data.collectAsStateWithLifecycle()
+                if (workoutData.plans.none { it.id == planId }) {
+                    Text(stringResource(R.string.invalid_plan), modifier = Modifier.padding(20.dp))
+                } else {
+                    val catalogViewModel: ExerciseViewModel = viewModel(factory = ExerciseViewModel.Factory)
+                    val catalogState by catalogViewModel.state.collectAsStateWithLifecycle()
+                    val catalogAction by plansViewModel.action.collectAsStateWithLifecycle()
+                    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+                    ExerciseCatalogScreen(
+                        state = catalogState,
+                        onSearch = catalogViewModel::search,
+                        onSelectMuscle = catalogViewModel::selectMuscle,
+                        onLoadMore = catalogViewModel::loadMore,
+                        onRetry = catalogViewModel::retry,
+                        onSelectExercise = { selectedId = it.id }
+                    )
+                    val results = catalogState.content as? ExerciseCatalogContent.Success
+                    val selected = results?.exercises?.firstOrNull { it.id == selectedId }
+                    if (selected != null) {
+                        AddExerciseDialog(
+                            exercises = listOf(selected.toWorkoutExercise()),
+                            action = catalogAction,
+                            onDismiss = { selectedId = null },
+                            allowSelection = false,
+                            onSave = { _, sets, reps, weight ->
+                                plansViewModel.addCatalogExercise(planId, selected, sets, reps, weight) {
+                                    selectedId = null
+                                    goBack()
+                                }
+                            }
+                        )
+                    }
+                }
             }
             composable(
                 route = Routes.EDIT_PLAN,
