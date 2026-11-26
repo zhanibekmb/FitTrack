@@ -2,6 +2,7 @@ package com.example.fittrack.data.repository
 
 import com.example.fittrack.data.model.WorkoutPlan
 import com.example.fittrack.data.model.WorkoutSession
+import com.example.fittrack.data.model.Exercise
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -24,9 +25,11 @@ class WorkoutPersistenceTest {
         var gate: CompletableDeferred<Unit>? = null
         override suspend fun initialize(plans: List<WorkoutPlan>) { saved = saved.copy(plans = plans) }
         override suspend fun read() = saved
-        override suspend fun savePlan(plan: WorkoutPlan) {
+        override suspend fun savePlan(plan: WorkoutPlan, importedExercise: Exercise?) {
             if (fail) throw IOException("Disk unavailable")
-            saved = saved.copy(plans = saved.plans.filterNot { it.id == plan.id } + plan)
+            saved = saved.copy(plans = saved.plans.filterNot { it.id == plan.id } + plan,
+                exercises = if (importedExercise == null) saved.exercises else
+                    saved.exercises.filterNot { it.id == importedExercise.id } + importedExercise)
             revision.value++
         }
         override suspend fun deletePlan(planId: String) {

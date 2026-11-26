@@ -2,6 +2,7 @@ package com.example.fittrack.data.repository
 
 import com.example.fittrack.data.DemoData
 import com.example.fittrack.data.model.CompletedSet
+import com.example.fittrack.data.model.CatalogExercise
 import com.example.fittrack.data.model.Exercise
 import com.example.fittrack.data.model.PlannedExercise
 import com.example.fittrack.data.model.WorkoutPlan
@@ -54,7 +55,7 @@ class WorkoutRepository(private val storage: WorkoutStorage? = null) {
 
     private suspend fun refreshStoredData() {
         val saved = storage?.read() ?: return
-        _data.value = _data.value.copy(plans = saved.plans, sessions = saved.sessions,
+        _data.value = _data.value.copy(plans = saved.plans, sessions = saved.sessions, exercises = saved.exercises,
             isLoading = false, storageError = false)
     }
 
@@ -117,6 +118,18 @@ class WorkoutRepository(private val storage: WorkoutStorage? = null) {
         true
     }
 
+    suspend fun addCatalogExerciseToPlan(planId: String, exercise: CatalogExercise,
+                                        targetSets: Int, targetReps: Int, targetWeightKg: Double): Boolean = changePlan {
+        if (!canEdit(planId) || exercise.wgerId <= 0 || exercise.name.isBlank()) return@changePlan false
+        if (targetSets <= 0 || targetReps <= 0 || !targetWeightKg.isFinite() || targetWeightKg < 0) return@changePlan false
+        val plan = _data.value.plans.find { it.id == planId } ?: return@changePlan false
+        val imported = exercise.toWorkoutExercise()
+        val updated = plan.copy(exercises = plan.exercises +
+            PlannedExercise(imported.id, targetSets, targetReps, targetWeightKg))
+        replacePlan(updated, imported)
+        true
+    }
+
     suspend fun removePlannedExercise(planId: String, index: Int): Boolean = changePlan {
         if (!canEdit(planId)) return@changePlan false
         val plan = _data.value.plans.find { it.id == planId } ?: return@changePlan false
@@ -132,13 +145,15 @@ class WorkoutRepository(private val storage: WorkoutStorage? = null) {
         sets > 0 && reps > 0 && weight.isFinite() && weight >= 0 &&
             _data.value.exercises.any { it.id == exerciseId }
 
-    private suspend fun replacePlan(updatedPlan: WorkoutPlan) {
+    private suspend fun replacePlan(updatedPlan: WorkoutPlan, imported: Exercise? = null) {
         val index = _data.value.plans.indexOfFirst { it.id == updatedPlan.id }
-        storage?.savePlan(updatedPlan)
+        storage?.savePlan(updatedPlan, imported)
         val current = _data.value
         val plans = current.plans.toMutableList()
         plans[index] = updatedPlan
-        _data.value = current.copy(plans = plans.toList())
+        val exercises = if (imported == null) current.exercises else
+            current.exercises.filterNot { it.id == imported.id } + imported
+        _data.value = current.copy(plans = plans.toList(), exercises = exercises)
     }
 
     fun startWorkout(planId: String): WorkoutSession? {

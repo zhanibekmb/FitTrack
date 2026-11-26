@@ -3,6 +3,7 @@ package com.example.fittrack.ui.plans
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fittrack.data.model.PlannedExercise
+import com.example.fittrack.data.model.CatalogExercise
 import com.example.fittrack.data.repository.FitTrackContainer
 import com.example.fittrack.data.repository.WorkoutRepository
 import kotlinx.coroutines.CancellationException
@@ -37,6 +38,11 @@ class PlansViewModel(private val repository: WorkoutRepository = FitTrackContain
 
     fun editExercise(planId: String, index: Int, exercise: PlannedExercise, onSaved: () -> Unit) = save {
         repository.editPlannedExercise(planId, index, exercise).also { if (it) onSaved() }
+    }
+
+    fun addCatalogExercise(planId: String, exercise: CatalogExercise, sets: Int, reps: Int,
+                           weightKg: Double, onSaved: () -> Unit) = save {
+        repository.addCatalogExerciseToPlan(planId, exercise, sets, reps, weightKg).also { if (it) onSaved() }
     }
 
     fun removeExercise(planId: String, index: Int) = save { repository.removePlannedExercise(planId, index) }

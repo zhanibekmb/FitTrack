@@ -21,6 +21,7 @@ FitTrack is an Android gym workout journal.
 - Navigation Compose
 - Room, KSP, and Coroutines
 - Preferences DataStore
+- Retrofit and Coil exercise catalog
 
 ## Team
 - Mukatay Zhanibek: Team Lead, Architecture & Navigation
@@ -66,9 +67,9 @@ are cleared after process death. A restored workout screen offers an explicit st
 action. Finish waits for the session and its checked sets to commit together;
 a failed write keeps the active workout available for retry.
 
-See [WORKOUT_MODULE.md](WORKOUT_MODULE.md) for task branches and manual checks,
-and [INTEGRATION.md](INTEGRATION.md) for shared module contracts.
-See [TEAM_INTEGRATION.md](TEAM_INTEGRATION.md) for the shared Room and settings contracts.
+Exercises selected from the REST catalog keep their name, muscle group, and
+equipment in Room, so saved plans and history remain readable offline. The v1-to-v2
+migration adds this metadata cache without removing existing plans or results.
 
 With an Android device or emulator connected, run `:app:connectedDebugAndroidTest`
 for the Room disk-reopen and screen checks. To verify a real app process restart,

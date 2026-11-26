@@ -11,6 +11,15 @@ data class PlanWithExercises(
 
 @Dao
 abstract class WorkoutPlanDao {
+    @Query("SELECT * FROM catalog_exercises ORDER BY name, id")
+    abstract fun observeCatalogExercises(): Flow<List<CatalogExerciseEntity>>
+
+    @Query("SELECT * FROM catalog_exercises ORDER BY name, id")
+    abstract suspend fun getCatalogExercises(): List<CatalogExerciseEntity>
+
+    @Upsert
+    abstract suspend fun cacheExercise(exercise: CatalogExerciseEntity)
+
     @Transaction
     @Query("SELECT * FROM workout_plans ORDER BY position, id")
     abstract fun observePlans(): Flow<List<PlanWithExercises>>

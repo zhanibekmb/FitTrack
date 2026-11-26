@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.fittrack.data.repository.FitTrackContainer
 import com.example.fittrack.data.repository.WorkoutPlanRepository
+import com.example.fittrack.data.model.CatalogExercise
+import com.example.fittrack.data.model.CatalogCredit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -31,14 +33,19 @@ class WorkoutProcessRestartTest {
         val name = requireNotNull(args.getString("persistenceName"))
         if (phase == "prepare") {
             val plan = repository.createPlan(name, 4)
-            assertTrue(repository.addExerciseToPlan(plan.id, "db-bench", 3, 9, 27.5))
+            val exercise = CatalogExercise(73, "Imported bench press", listOf("Chest"), "Chest",
+                listOf("Barbell", "Bench"), CatalogCredit("Bench", emptyList(), "https://wger.de/", null), null)
+            assertTrue(repository.addCatalogExerciseToPlan(plan.id, exercise, 3, 9, 27.5))
             assertNotNull(repository.startWorkout(plan.id))
-            assertTrue(repository.completeSet("db-bench", 1, 27.5, 9))
+            assertTrue(repository.completeSet("wger:73", 1, 27.5, 9))
             assertNotNull(repository.finishWorkout())
         } else {
             val plan = repository.data.value.plans.single { it.name == name }
             assertEquals(4, plan.dayOfWeek)
             assertEquals(27.5, plan.exercises.single().targetWeightKg, 0.0)
+            val exercise = repository.data.value.exercises.single { it.id == "wger:73" }
+            assertEquals("Imported bench press", exercise.name)
+            assertEquals(listOf("Barbell", "Bench"), exercise.equipment)
             val saved = repository.data.value.sessions.single { it.planId == plan.id }
             assertEquals(name, saved.planName)
             assertEquals(247.5, saved.totalVolumeKg(), 0.0)
