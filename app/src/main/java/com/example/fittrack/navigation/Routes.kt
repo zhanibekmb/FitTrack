@@ -14,6 +14,9 @@ object Routes {
     const val CREATE_PLAN = "plans/create"
     const val EDIT_PLAN = "plans/edit/{planId}"
     const val PLAN_DETAIL = "plans/detail/{planId}"
+    const val EXERCISE_CATALOG = "plans/exercise-catalog/{planId}"
+
+    fun exerciseCatalog(planId: String) = "plans/exercise-catalog/${Uri.encode(planId)}"
 
     fun editPlan(planId: String): String {
         return "plans/edit/${Uri.encode(planId)}"
