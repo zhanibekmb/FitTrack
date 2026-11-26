@@ -2,7 +2,7 @@
 
 ## Workout Planning & Session Persistence
 
-The updated assignment is implemented on `codex/workout-room-persistence`, based
+The updated assignment is implemented on `feature/workout-room-persistence`, based
 on the current GitHub main. The older branch table below describes the previous
 workout-session assignment.
 
