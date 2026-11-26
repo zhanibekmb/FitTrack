@@ -1,6 +1,7 @@
 package com.example.fittrack.data.repository
 
 import com.example.fittrack.data.DemoData
+import com.example.fittrack.data.model.CatalogExercise
 import com.example.fittrack.data.model.CompletedSet
 import com.example.fittrack.data.model.Exercise
 import com.example.fittrack.data.model.PlannedExercise
@@ -55,19 +56,45 @@ class WorkoutRepository {
         targetSets: Int,
         targetReps: Int,
         targetWeightKg: Double
+    ): Boolean = addExerciseToPlan(planId, exerciseId, targetSets, targetReps, targetWeightKg, null)
+
+    fun addCatalogExerciseToPlan(
+        planId: String,
+        exercise: CatalogExercise,
+        targetSets: Int,
+        targetReps: Int,
+        targetWeightKg: Double
+    ): Boolean {
+        if (exercise.wgerId <= 0 || exercise.name.isBlank()) return false
+        return addExerciseToPlan(
+            planId, exercise.id, targetSets, targetReps, targetWeightKg, exercise.toWorkoutExercise()
+        )
+    }
+
+    private fun addExerciseToPlan(
+        planId: String,
+        exerciseId: String,
+        targetSets: Int,
+        targetReps: Int,
+        targetWeightKg: Double,
+        imported: Exercise?
     ): Boolean {
         if (targetSets <= 0 || targetReps <= 0) return false
         if (!targetWeightKg.isFinite() || targetWeightKg < 0) return false
-        if (_data.value.exercises.none { it.id == exerciseId }) return false
 
-        val plan = _data.value.plans.find { it.id == planId } ?: return false
-        val exercise = PlannedExercise(exerciseId, targetSets, targetReps, targetWeightKg)
-        replacePlan(plan.copy(exercises = plan.exercises + exercise))
+        val current = _data.value
+        val plan = current.plans.find { it.id == planId } ?: return false
+        val exercises = if (current.exercises.any { it.id == exerciseId }) {
+            current.exercises
+        } else {
+            current.exercises + (imported ?: return false)
+        }
+        val planned = PlannedExercise(exerciseId, targetSets, targetReps, targetWeightKg)
+        replacePlan(plan.copy(exercises = plan.exercises + planned), current.copy(exercises = exercises))
         return true
     }
 
-    private fun replacePlan(updatedPlan: WorkoutPlan) {
-        val current = _data.value
+    private fun replacePlan(updatedPlan: WorkoutPlan, current: WorkoutData = _data.value) {
         val plans = current.plans.toMutableList()
         val index = plans.indexOfFirst { it.id == updatedPlan.id }
         plans[index] = updatedPlan
