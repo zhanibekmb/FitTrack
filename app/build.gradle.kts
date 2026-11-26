@@ -71,4 +71,13 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // Material Icons (Add, Edit, Delete)
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // Coil for Compose images
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Retrofit + Gson converter
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 }
