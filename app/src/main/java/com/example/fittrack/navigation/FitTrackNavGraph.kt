@@ -2,6 +2,12 @@ package com.example.fittrack.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Scaffold
@@ -39,6 +45,7 @@ import kotlinx.coroutines.launch
 fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Unit) {
     val navController = rememberNavController()
     val repository = FitTrackContainer.repository
+    val storedData by repository.data.collectAsStateWithLifecycle()
     val workoutViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(repository))
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -83,6 +90,16 @@ fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Un
         topBar = { FitTrackAppBar(title, if (route == Routes.HOME) null else goBack) },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
+        if (storedData.isLoading || storedData.storageError) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                if (storedData.isLoading) CircularProgressIndicator()
+                else Column {
+                    Text(stringResource(R.string.storage_load_failed))
+                    Button(onClick = FitTrackContainer::retryStorage) { Text(stringResource(R.string.retry_storage)) }
+                }
+            }
+            return@Scaffold
+        }
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
@@ -167,6 +184,7 @@ fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Un
                 } else {
                     val catalogViewModel: ExerciseViewModel = viewModel(factory = ExerciseViewModel.Factory)
                     val catalogState by catalogViewModel.state.collectAsStateWithLifecycle()
+                    val catalogAction by plansViewModel.action.collectAsStateWithLifecycle()
                     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
                     ExerciseCatalogScreen(
                         state = catalogState,
@@ -181,15 +199,14 @@ fun FitTrackNavGraph(settings: SettingsUiState, onSelectTheme: (ThemeMode) -> Un
                     if (selected != null) {
                         AddExerciseDialog(
                             exercises = listOf(selected.toWorkoutExercise()),
+                            action = catalogAction,
                             onDismiss = { selectedId = null },
                             allowSelection = false,
                             onSave = { _, sets, reps, weight ->
-                                val saved = plansViewModel.addCatalogExercise(planId, selected, sets, reps, weight)
-                                if (saved) {
+                                plansViewModel.addCatalogExercise(planId, selected, sets, reps, weight) {
                                     selectedId = null
                                     goBack()
                                 }
-                                saved
                             }
                         )
                     }

@@ -3,11 +3,12 @@ package com.example.fittrack.data.repository
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.coroutines.test.runTest
 
 class WorkoutRepositoryTest {
 
     @Test
-    fun repositoryStartsWithDemoData() {
+    fun repositoryStartsWithDemoData() = runTest {
         val repository = WorkoutRepository()
 
         assertEquals(3, repository.data.value.plans.size)
@@ -17,7 +18,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun createPlanAndAddExercise() {
+    fun createPlanAndAddExercise() = runTest {
         val repository = WorkoutRepository()
 
         val plan = repository.createPlan(
@@ -52,7 +53,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun startWorkoutCreatesActiveSession() {
+    fun startWorkoutCreatesActiveSession() = runTest {
         val repository = WorkoutRepository()
 
         val session = repository.startWorkout("push-day")
@@ -69,7 +70,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun completeSetValidatesInput() {
+    fun completeSetValidatesInput() = runTest {
         val repository = WorkoutRepository()
 
         repository.startWorkout("push-day")
@@ -107,7 +108,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun finishWorkoutSavesHistory() {
+    fun finishWorkoutSavesHistory() = runTest {
         val repository = WorkoutRepository()
 
         repository.startWorkout("push-day")
@@ -139,7 +140,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun previousSetsReturnsLatestResults() {
+    fun previousSetsReturnsLatestResults() = runTest {
         val repository = WorkoutRepository()
 
         // First workout
@@ -162,7 +163,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun editAndDeletePlanKeepFinishedWorkoutHistory() {
+    fun editAndDeletePlanKeepFinishedWorkoutHistory() = runTest {
         val repository = WorkoutRepository()
         val plan = repository.createPlan("Upper Body", 2)
         assertNull(repository.startWorkout(plan.id))
@@ -188,7 +189,7 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun cannotFinishEmptyWorkout() {
+    fun cannotFinishEmptyWorkout() = runTest {
         val repository = WorkoutRepository()
 
         repository.startWorkout("push-day")

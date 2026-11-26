@@ -18,6 +18,7 @@ import com.example.fittrack.data.model.ThemeMode
 import com.example.fittrack.ui.settings.SettingsViewModel
 import com.example.fittrack.navigation.FitTrackNavGraph
 import com.example.fittrack.ui.theme.FitTrackTheme
+import com.example.fittrack.data.repository.FitTrackContainer
 
 class MainActivity : ComponentActivity()     {
     override fun attachBaseContext(newBase: Context) {
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity()     {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FitTrackContainer.initialize(applicationContext)
         enableEdgeToEdge()
         setContent {
             val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()

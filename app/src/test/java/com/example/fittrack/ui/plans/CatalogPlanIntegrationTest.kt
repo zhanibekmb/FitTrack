@@ -11,10 +11,31 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CatalogPlanIntegrationTest {
     private val repository = WorkoutRepository()
     private val plans = PlansViewModel(repository)
+    private val dispatcher = StandardTestDispatcher()
+    @Before fun setUp() { Dispatchers.setMain(dispatcher) }
+    @After fun tearDown() {
+        plans.viewModelScope.cancel()
+        Dispatchers.resetMain()
+    }
+
+    private fun TestScope.add(planId: String, sets: Int, reps: Int, weight: Double): Boolean {
+        var saved = false
+        plans.addCatalogExercise(planId, bench, sets, reps, weight) { saved = true }
+        runCurrent()
+        return saved
+    }
     private val bench = CatalogExercise(
         wgerId = 73,
         name = "Bench Press",
@@ -26,12 +47,12 @@ class CatalogPlanIntegrationTest {
     )
 
     @Test
-    fun importedExerciseRemainsAvailableToPlanWorkoutAndHistoryWithoutAnApiCall() {
-        val plan = plans.createPlan("Strength", 2)
+    fun importedExerciseRemainsAvailableToPlanWorkoutAndHistoryWithoutAnApiCall() = runTest(dispatcher) {
+        val plan = repository.createPlan("Strength", 2)
         val initialExercises = repository.data.value.exercises
 
-        assertTrue(plans.addCatalogExercise(plan.id, bench, 2, 8, 35.5))
-        assertTrue(plans.addCatalogExercise(plan.id, bench, 1, 10, 25.0))
+        assertTrue(add(plan.id, 2, 8, 35.5))
+        assertTrue(add(plan.id, 1, 10, 25.0))
         val added = repository.data.value
         assertEquals(initialExercises, added.exercises.filterNot { it.id == "wger:73" })
         val registered = added.exercises.single { it.id == "wger:73" }
@@ -45,7 +66,7 @@ class CatalogPlanIntegrationTest {
 
         assertNotNull(repository.startWorkout(plan.id))
         assertNull(repository.startWorkout("push-day"))
-        assertFalse(plans.deletePlan(plan.id))
+        assertFalse(repository.deletePlan(plan.id))
         assertTrue(repository.completeSet("wger:73", 1, 35.5, 8))
         val history = checkNotNull(repository.finishWorkout())
         assertEquals("wger:73", history.completedSets.single().exerciseId)
@@ -54,15 +75,15 @@ class CatalogPlanIntegrationTest {
     }
 
     @Test
-    fun invalidTargetsOrMissingPlanDoNotRegisterMetadata() {
-        val plan = plans.createPlan("Strength", 2)
+    fun invalidTargetsOrMissingPlanDoNotRegisterMetadata() = runTest(dispatcher) {
+        val plan = repository.createPlan("Strength", 2)
         val before = repository.data.value
 
-        assertFalse(plans.addCatalogExercise(plan.id, bench, 0, 8, 35.5))
-        assertFalse(plans.addCatalogExercise(plan.id, bench, 2, 0, 35.5))
-        assertFalse(plans.addCatalogExercise(plan.id, bench, 2, 8, Double.NaN))
-        assertFalse(plans.addCatalogExercise("missing-plan", bench, 2, 8, 35.5))
-        assertFalse(plans.addExercise(plan.id, "wger:73", 2, 8, 35.5))
+        assertFalse(add(plan.id, 0, 8, 35.5))
+        assertFalse(add(plan.id, 2, 0, 35.5))
+        assertFalse(add(plan.id, 2, 8, Double.NaN))
+        assertFalse(add("missing-plan", 2, 8, 35.5))
+        assertFalse(repository.addExerciseToPlan(plan.id, "wger:73", 2, 8, 35.5))
         assertSame(before, repository.data.value)
     }
 }

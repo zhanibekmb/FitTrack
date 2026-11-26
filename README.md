@@ -10,6 +10,7 @@ FitTrack is an Android gym workout journal.
 - Rest timer
 - Workout history
 - Progress statistics
+- Room storage for plans, planned exercises, and finished workout sets
 - Persistent light, dark, or system appearance
 
 ## Tech Stack
@@ -18,6 +19,9 @@ FitTrack is an Android gym workout journal.
 - MVVM
 - StateFlow
 - Navigation Compose
+- Room, KSP, and Coroutines
+- Preferences DataStore
+- Retrofit and Coil exercise catalog
 
 ## Team
 - Mukatay Zhanibek: Team Lead, Architecture & Navigation
@@ -55,11 +59,23 @@ Finish Workout saves only checked sets, updates the dashboard, and makes the
 results available in Workout History and exercise progress. Discard Workout
 requires confirmation and saves nothing. Plans are never changed by set input.
 
-Workout data is held in memory. Theme preferences are saved with DataStore. Rotation preserves the active workout, but process
-death resets the repository to demo data. A restored workout screen offers an
-explicit start action rather than recording into a missing session. There are
-no background notifications or permanent database storage in this version.
+Plans, exercise targets, and finished workouts are saved in Room (`fittrack.db`).
+Sample plans are inserted once on the first database creation; deleting all plans
+keeps the list empty on later launches. Theme preferences are saved with DataStore.
+Active workout drafts and the rest timer stay in memory and survive rotation, but
+are cleared after process death. A restored workout screen offers an explicit start
+action. Finish waits for the session and its checked sets to commit together;
+a failed write keeps the active workout available for retry.
 
-See [WORKOUT_MODULE.md](WORKOUT_MODULE.md) for task branches and manual checks,
-and [INTEGRATION.md](INTEGRATION.md) for shared module contracts.
-See [TEAM_INTEGRATION.md](TEAM_INTEGRATION.md) for the Room and settings handoff.
+Exercises selected from the REST catalog keep their name, muscle group, and
+equipment in Room, so saved plans and history remain readable offline. The v1-to-v2
+migration adds this metadata cache without removing existing plans or results.
+
+With an Android device or emulator connected, run `:app:connectedDebugAndroidTest`
+for the Room disk-reopen and screen checks. To verify a real app process restart,
+first install the debug app and test APKs with `:app:installDebug :app:installDebugAndroidTest`,
+then run:
+
+```powershell
+.\scripts\check-workout-restart.ps1 -Adb 'C:\path\to\AndroidSDK\platform-tools\adb.exe'
+```
